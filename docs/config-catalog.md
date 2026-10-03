@@ -320,7 +320,7 @@ export interface Config {
 ## `@deepseek-ai/dsh-api-workspace-files`
 
 - `inject`: `fs` · `sandboxPolicy` · `sessions` · `typert`
-- `source`: [`packages/api/workspace-files/src/index.ts:70`](../packages/api/workspace-files/src/index.ts)
+- `source`: [`packages/api/workspace-files/src/index.ts:72`](../packages/api/workspace-files/src/index.ts)
 
 ```ts config-catalog
 /** Deployment caps on one page or one listing. */
@@ -342,6 +342,23 @@ export interface Config {
 }
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-api-workspace-files -->
+
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-api-workspace-git -->
+<a id="deepseek-aidsh-api-workspace-git"></a>
+
+## `@deepseek-ai/dsh-api-workspace-git`
+
+- `inject`: `sandboxPolicy` · `sessions` · `subprocess` · `typert`
+- `source`: [`packages/api/workspace-git/src/index.ts:54`](../packages/api/workspace-git/src/index.ts)
+
+```ts config-catalog
+/** Deployment bounds on one git invocation. */
+export interface Config {
+  /** Deadline in milliseconds for one `git` invocation. */
+  readonly timeoutMs: number
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-api-workspace-git -->
 
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-attachment-local -->
 <a id="deepseek-aidsh-attachment-local"></a>
@@ -1777,7 +1794,7 @@ export interface Config extends ProtocolConfig {
 
 - `inject`: `llm`
 - `refs`: `Api` (`@earendil-works/pi-ai`) · `CacheRetention` (`@earendil-works/pi-ai`) · `Model` (`@earendil-works/pi-ai`) · `ModelThinkingLevel` (`@earendil-works/pi-ai`) · `OpenAICompletionsCompat` (`@earendil-works/pi-ai`) · [`RetryPolicyConfig`](../packages/llm/llm/src/index.ts) · `ThinkingBudgets` (`@earendil-works/pi-ai`) · `Transport` (`@earendil-works/pi-ai`) · `Volatile` (`@deepseek-ai/cordis`)
-- `source`: [`packages/llm/llm-pi-ai/src/config.ts:222`](../packages/llm/llm-pi-ai/src/config.ts)
+- `source`: [`packages/llm/llm-pi-ai/src/config.ts:227`](../packages/llm/llm-pi-ai/src/config.ts)
 
 ```ts config-catalog
 /** Plugin configuration: the provider routes this instance owns. */
@@ -1921,6 +1938,13 @@ export interface PiAiModelProfile {
   reasoningEfforts?: false | PiAiReasoningEfforts
   /** pi-ai wire-compatibility switches for this model, winning over the route's per field; one its protocol does not declare is refused. */
   compat?: PiAiCompatProfile
+  /**
+   * Peak windows served by another provider resolved from the installed
+   * pi-ai catalog. The route keeps its own provider, endpoint, and display
+   * name; only the request's wire endpoint follows the active window. An
+   * empty list is the same as omitting the field.
+   */
+  peak?: PiAiPeakWindow[]
 }
 
 /**
@@ -2037,11 +2061,38 @@ export type PiAiModality = Model<Api>['input'][number]
  */
 export type PiAiReasoningEfforts = Partial<Record<ModelThinkingLevel, string | null>>
 
+/** One local wall-clock window served by an alternate provider. */
+export interface PiAiPeakWindow {
+  /** Inclusive local start as `HH:mm`. */
+  from: string
+  /** Exclusive local end as `HH:mm`; earlier than {@link from} crosses midnight. */
+  to: string
+  /** IANA time zone the window is evaluated in; omission uses the process zone. */
+  timeZone?: string
+  /** Candidate providers in priority order; the first that serves the model is used. */
+  providers: PiAiPeakProvider[]
+}
+
 /** One reasoning-dispatch wire format a profile may name. */
 export type PiAiThinkingFormat = NonNullable<OpenAICompletionsCompat['thinkingFormat']>
 
 /** The reasoning-budget field spellings pi-ai accepts. */
 export type PiAiThinkingTokenBudgetField = NonNullable<OpenAICompletionsCompat['thinkingTokenBudgetField']>
+
+/** One provider a peak window may serve a model with. */
+export interface PiAiPeakProvider {
+  /** pi-ai provider id, resolved against the installed catalog. */
+  provider: string
+  /**
+   * Credential reference (environment-variable name) resolved per request
+   * through the credential seam. Omission uses the candidate route's own
+   * `apiKeyEnv` when the candidate is a configured route, so a window keeps
+   * that route's authentication without repeating it; a candidate this build
+   * knows only as an installed-catalog provider has no route profile to
+   * inherit from and defers to pi-ai's provider-native ambient discovery.
+   */
+  apiKeyEnv?: string
+}
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-llm-pi-ai -->
 
@@ -2775,7 +2826,7 @@ export interface JsonRpcConfig {
 ```ts config-catalog
 /** Session-log request contribution configuration. */
 export interface Config {
-  /** Contribute `dsh_session_log` to official DeepSeek requests. Defaults to `true`. */
+  /** Contribute `dsh_session_log` to official DeepSeek requests. Defaults to `false`, so the field is opt-in. */
   enabled: Volatile<boolean>
   /**
    * Largest serialized `dsh_session_log` field, in UTF-8 bytes, that one request carries.
@@ -4306,6 +4357,7 @@ export type ApprovalPolicy = 'ask' | 'never'
 
 ## `@deepseek-ai/dsh-web`
 
+- `refs`: `Volatile` (`@deepseek-ai/cordis`)
 - `source`: [`packages/web/web/src/index.ts:55`](../packages/web/web/src/index.ts)
 
 ```ts config-catalog
@@ -4316,8 +4368,12 @@ export type ApprovalPolicy = 'ask' | 'never'
  * must feed these same fields rather than introduce a hidden priority chain.
  */
 export interface WebRuntimeConfig {
-  /** Explicit search provider id. Omitted = auto-select when exactly one usable. */
-  readonly searchProvider?: string
+  /**
+   * Live explicit search provider id. Read at each search, so a settings write
+   * to this field takes effect on the next search without a restart. Omitted =
+   * auto-select when exactly one usable.
+   */
+  readonly searchProvider?: Volatile<string | undefined>
   /** Explicit fetch provider id. Omitted = auto-select when exactly one usable. */
   readonly fetchProvider?: string
 }
@@ -4397,7 +4453,7 @@ export interface Config {
   apiKey: Volatile<string | undefined>
   /** Credential reference resolved for each search; defaults to `DEEPSEEK_API_KEY`. */
   apiKeyEnv: Volatile<string>
-  /** Anthropic-compatible endpoint base; `/messages` is appended. */
+  /** Anthropic-compatible endpoint base or full endpoint; `/messages` is appended when the value is not already it. */
   baseURL: Volatile<string | undefined>
   /** Anthropic-format model name. Defaults to `deepseek-v4-flash`. */
   model: Volatile<string>
@@ -4424,7 +4480,7 @@ export interface Config {
 export interface Config {
   /** Exa API key. Falls back to `$EXA_API_KEY`. Empty → provider unavailable. */
   apiKey?: string
-  /** Endpoint base; `/search` is appended. Defaults to the public API. */
+  /** Endpoint base or full endpoint; `/search` is appended when the value is not already it. Defaults to the public API. */
   baseURL?: string
   /** Retrieval mode sent as Exa's `type`. Defaults to `auto`. */
   searchType?: 'auto' | 'keyword' | 'neural'
@@ -4435,6 +4491,33 @@ export interface Config {
 }
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-web-search-exa -->
+
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-web-search-ollama -->
+<a id="deepseek-aidsh-web-search-ollama"></a>
+
+## `@deepseek-ai/dsh-web-search-ollama`
+
+- `inject`: `web`
+- `refs`: `Volatile` (`@deepseek-ai/cordis`)
+- `source`: [`packages/web/web-search-ollama/src/index.ts:39`](../packages/web/web-search-ollama/src/index.ts)
+
+```ts config-catalog
+/** Live plugin config (the settings page edits these references in place). */
+export interface Config {
+  /** Literal Ollama Cloud API key; prefer {@link apiKeyEnv} so no secret enters configuration files. */
+  apiKey: Volatile<string | undefined>
+  /** Credential reference resolved for each search; defaults to `OLLAMA_CLOUD_API_KEY`. */
+  apiKeyEnv: Volatile<string>
+  /**
+   * Ollama Cloud endpoint base or full endpoint; `/api/web_search` is appended
+   * when the value is not already it. Falls back to `$OLLAMA_SEARCH_BASE_URL`.
+   */
+  baseURL: Volatile<string | undefined>
+  /** Default result count when a request carries no `maxResults`. Defaults to 5. */
+  maxResults: Volatile<number>
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-web-search-ollama -->
 
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-web-search-perplexity -->
 <a id="deepseek-aidsh-web-search-perplexity"></a>
@@ -4449,7 +4532,7 @@ export interface Config {
 export interface Config {
   /** Perplexity API key. Falls back to `$PERPLEXITY_API_KEY`. Empty → unavailable. */
   apiKey?: string
-  /** Endpoint base; `/chat/completions` is appended. Defaults to the public API. */
+  /** Endpoint base or full endpoint; `/chat/completions` is appended when the value is not already it. Defaults to the public API. */
   baseURL?: string
   /** Search model name. Defaults to `sonar`. */
   model?: string
@@ -4515,7 +4598,7 @@ export interface Config {
 ## `@deepseek-ai/dsh-working-directory`
 
 - `inject`: `fs` · `sessionProjections` · `systemPrompt`
-- `source`: [`packages/session/working-directory/src/index.ts:56`](../packages/session/working-directory/src/index.ts)
+- `source`: [`packages/session/working-directory/src/index.ts:47`](../packages/session/working-directory/src/index.ts)
 
 ```ts config-catalog
 /** Deployment default for Sessions without an original project directory. */
@@ -4570,6 +4653,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 | `@deepseek-ai/dsh-browser-use` | — | [`packages/browser-use/browser-use/src/index.ts`](../packages/browser-use/browser-use/src/index.ts) |
 | `@deepseek-ai/dsh-client-file-upload` | `agents` · `attachments` · `commands` · `connection` | [`packages/client/file-upload/src/index.ts`](../packages/client/file-upload/src/index.ts) |
 | `@deepseek-ai/dsh-client-locale` | — | [`packages/client/locale/src/index.ts`](../packages/client/locale/src/index.ts) |
+| `@deepseek-ai/dsh-client-locale-ja` | — | [`packages/client/locale-ja/src/index.ts`](../packages/client/locale-ja/src/index.ts) |
 | `@deepseek-ai/dsh-client-modules` | `loader` | [`packages/client/modules/src/index.ts`](../packages/client/modules/src/index.ts) |
 | `@deepseek-ai/dsh-client-resources` | — | [`packages/client/resources/src/index.ts`](../packages/client/resources/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-agent-preset` | — | [`packages/client/ui-agent-preset/src/index.ts`](../packages/client/ui-agent-preset/src/index.ts) |
@@ -4583,6 +4667,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 | `@deepseek-ai/dsh-client-ui-deliverables` | `systemPrompt` · `connection` · `sessionQuery` · `sessionController` · `workspaceFiles` · `fs` · `sandboxPolicy` · `workspaceChanges` | [`packages/client/ui-deliverables/src/index.ts`](../packages/client/ui-deliverables/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-directory-picker-browse` | — | [`packages/client/ui-directory-picker-browse/src/index.ts`](../packages/client/ui-directory-picker-browse/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-directory-picker-native` | — | [`packages/client/ui-directory-picker-native/src/index.ts`](../packages/client/ui-directory-picker-native/src/index.ts) |
+| `@deepseek-ai/dsh-client-ui-git-branch` | — | [`packages/client/ui-git-branch/src/index.ts`](../packages/client/ui-git-branch/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-goal` | — | [`packages/client/ui-goal/src/index.ts`](../packages/client/ui-goal/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-input-trigger` | — | [`packages/client/ui-input-trigger/src/index.ts`](../packages/client/ui-input-trigger/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-jobs` | — | [`packages/client/ui-jobs/src/index.ts`](../packages/client/ui-jobs/src/index.ts) |

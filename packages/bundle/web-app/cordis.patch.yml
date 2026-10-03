@@ -29,6 +29,26 @@
     path: ':memory:'
     openAt: never
 
+# Per-instance durable state. `--instance`, which derives the namespace from an
+# explicit `--port`, moves the Session store and the durable KV store (workspace, schedule, projection cache) under
+# `$DSH_HOME/instances/<name>/`. Two Web servers sharing one home would
+# otherwise share the Session listing read by SessionController.list, and the
+# JSON backend documents one writer per process with last-write-wins for a unit
+# file, so concurrent servers could overwrite each other's workspace, schedule,
+# and projection records. Profiles, credentials, settings, and attachments stay
+# shared. `web-startup` provides the name before these rows resolve it (and
+# desktop passes none, keeping the flat layout). See
+# .agents/notes/implemented/architecture/2026-10-12-web-instance-durable-state.md.
+- id: session-persistence-jsonl
+  inject: [webStartup]
+  config:
+    root: !!js dshInstancePath(ctx.webStartup.instance, 'sessions')
+
+- id: storage-json
+  inject: [webStartup]
+  config:
+    root: !!js dshInstancePath(ctx.webStartup.instance, 'storages')
+
 - id: tools
   config:
     # TEMPORARY workaround: DSH_TOOLS_MODE (native|ptc) opts a whole dsh
@@ -125,12 +145,24 @@
     # the roster rides the session control stream above.
     - id: job-controller
       name: '@deepseek-ai/dsh-api-job-controller'
-    # Workspace file service: bounded read, directory listing, and the
-    # agent-write change feed inside the session workspace root.
+
+    # Interactive user terminals: default shell, reconnect, and bounded
+    # screen recovery over Typert Remote.
     - id: terminal-controller
       name: '@deepseek-ai/dsh-api-terminal-controller'
+
+    # Workspace file service: bounded read, directory listing, and the
+    # agent-write change feed inside the session workspace root.
     - id: workspace-files
       name: '@deepseek-ai/dsh-api-workspace-files'
+
+    # Workspace git service: the checkout the session workspace directory
+    # lives in — ref, worktree directory, and origin GitHub repository — read
+    # through the composition's subprocess provider.
+    - id: workspace-git
+      name: '@deepseek-ai/dsh-api-workspace-git'
+      config:
+        timeoutMs: 5000
 
     # The Schedule service owns the task store and delivers each due occurrence
     # as a follow-up in its original Session. The clock reading and the four
@@ -263,6 +295,12 @@
     - id: ui-shortcuts
       name: '@deepseek-ai/dsh-client-ui-shortcuts'
 
+    # Japanese pack: registers the ja locale and its dictionaries over the
+    # shipped zh/en registry. Remove this entry to drop Japanese from the
+    # language selector.
+    - id: locale-ja
+      name: '@deepseek-ai/dsh-client-locale-ja'
+
     - id: ui-layout
       name: '@deepseek-ai/dsh-client-ui-layout'
 
@@ -331,6 +369,12 @@
 
     - id: ui-chat
       name: '@deepseek-ai/dsh-client-ui-chat'
+
+    # Ambient composer stats-row chip: the checkout the current Session
+    # workspace lives in (GitHub repository, branch, worktree directory) over
+    # the workspaceGit Remote namespace.
+    - id: ui-git-branch
+      name: '@deepseek-ai/dsh-client-ui-git-branch'
 
     # Official occupants for the generic sidebar and conversation brand slots.
     - id: ui-brand-official

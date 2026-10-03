@@ -87,6 +87,7 @@ flowchart TD
     pkg_web_fetch_http["web-fetch-http"]
     pkg_web_search_deepseek["web-search-deepseek"]
     pkg_web_search_exa["web-search-exa"]
+    pkg_web_search_ollama["web-search-ollama"]
     pkg_web_search_perplexity["web-search-perplexity"]
   end
   subgraph group_spill["packages/spill"]
@@ -119,6 +120,7 @@ flowchart TD
     pkg_api_terminal_controller["api-terminal-controller"]
     pkg_api_workspace_controller["api-workspace-controller"]
     pkg_api_workspace_files["api-workspace-files"]
+    pkg_api_workspace_git["api-workspace-git"]
   end
   subgraph group_attachment["packages/attachment"]
     pkg_attachment["attachment"]
@@ -148,6 +150,7 @@ flowchart TD
     pkg_client_file_upload["client-file-upload"]
     pkg_client_hmr["client-hmr"]
     pkg_client_locale["client-locale"]
+    pkg_client_locale_ja["client-locale-ja"]
     pkg_client_modules["client-modules"]
     pkg_client_product_analytics["client-product-analytics"]
     pkg_client_resources["client-resources"]
@@ -164,6 +167,7 @@ flowchart TD
     pkg_client_ui_directory_picker_browse["client-ui-directory-picker-browse"]
     pkg_client_ui_directory_picker_native["client-ui-directory-picker-native"]
     pkg_client_ui_dockkit["client-ui-dockkit"]
+    pkg_client_ui_git_branch["client-ui-git-branch"]
     pkg_client_ui_goal["client-ui-goal"]
     pkg_client_ui_input_trigger["client-ui-input-trigger"]
     pkg_client_ui_jobs["client-ui-jobs"]
@@ -486,6 +490,9 @@ flowchart TD
   pkg_web_fetch_http --> pkg_web
   pkg_web_search_exa --> pkg_launch_environment
   pkg_web_search_exa --> pkg_web
+  pkg_web_search_ollama --> pkg_credentials
+  pkg_web_search_ollama --> pkg_launch_environment
+  pkg_web_search_ollama --> pkg_web
   pkg_web_search_perplexity --> pkg_launch_environment
   pkg_web_search_perplexity --> pkg_web
   pkg_spill --> pkg_brand
@@ -1448,6 +1455,7 @@ flowchart TD
 | [`api-job-controller`](../packages/api/job-controller) | `api` | — |
 | [`api-remote-access`](../packages/api/remote-access) | `api` | — |
 | [`api-workspace-files`](../packages/api/workspace-files) | `api` | — |
+| [`api-workspace-git`](../packages/api/workspace-git) | `api` | — |
 | [`cmdline`](../packages/boot/cmdline) | `boot` | — |
 | [`acp-app`](../packages/bundle/acp-app) | `bundle` | — |
 | [`base`](../packages/bundle/base) | `bundle` | — |
@@ -1456,6 +1464,7 @@ flowchart TD
 | [`client-file-upload`](../packages/client/file-upload) | `client` | — |
 | [`client-hmr`](../packages/client/hmr) | `client` | — |
 | [`client-locale`](../packages/client/locale) | `client` | — |
+| [`client-locale-ja`](../packages/client/locale-ja) | `client` | — |
 | [`client-modules`](../packages/client/modules) | `client` | — |
 | [`client-product-analytics`](../packages/client/product-analytics) | `client` | — |
 | [`client-resources`](../packages/client/resources) | `client` | — |
@@ -1472,6 +1481,7 @@ flowchart TD
 | [`client-ui-directory-picker-browse`](../packages/client/ui-directory-picker-browse) | `client` | — |
 | [`client-ui-directory-picker-native`](../packages/client/ui-directory-picker-native) | `client` | — |
 | [`client-ui-dockkit`](../packages/client/ui-dockkit) | `client` | — |
+| [`client-ui-git-branch`](../packages/client/ui-git-branch) | `client` | — |
 | [`client-ui-goal`](../packages/client/ui-goal) | `client` | — |
 | [`client-ui-input-trigger`](../packages/client/ui-input-trigger) | `client` | — |
 | [`client-ui-jobs`](../packages/client/ui-jobs) | `client` | — |
@@ -1577,6 +1587,7 @@ flowchart TD
 | [`skill-office`](../packages/skill/skill-office) | `skill` | [`skill`](../packages/skill/skill) |
 | [`web-fetch-http`](../packages/web/web-fetch-http) | `web` | [`http-proxy`](../packages/util/http-proxy), [`timeout`](../packages/util/timeout), [`web`](../packages/web/web) |
 | [`web-search-exa`](../packages/web/web-search-exa) | `web` | [`launch-environment`](../packages/util/launch-environment), [`web`](../packages/web/web) |
+| [`web-search-ollama`](../packages/web/web-search-ollama) | `web` | [`credentials`](../packages/credentials/credentials), [`launch-environment`](../packages/util/launch-environment), [`web`](../packages/web/web) |
 | [`web-search-perplexity`](../packages/web/web-search-perplexity) | `web` | [`launch-environment`](../packages/util/launch-environment), [`web`](../packages/web/web) |
 | [`spill`](../packages/spill/spill) | `spill` | [`brand`](../packages/util/brand), [`llm`](../packages/llm/llm), [`session`](../packages/core/session) |
 | [`api-terminal-controller`](../packages/api/terminal-controller) | `api` | [`subprocess`](../packages/subprocess/subprocess) |

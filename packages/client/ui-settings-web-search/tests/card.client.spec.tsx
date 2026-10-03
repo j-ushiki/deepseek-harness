@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-/** The web-search page as the Plugins page renders it: its key control, its two fields, and their resets. */
+/** The web-search page as the Plugins page renders it: the provider selector, its key control, its fields, and their resets. */
 
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -7,7 +7,7 @@ import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-test-runtime'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { SettingsFieldState, SettingsFormShell } from '@deepseek-ai/dsh-client-ui-primitives'
 import { WebSearchCard, type WebSearchCardProps } from '../src/client/WebSearchCard.tsx'
-import type { WebSearchCardState } from '../src/client/web-search-card-controller.ts'
+import type { WebSearchCardState, WebSearchProviderOption } from '../src/client/web-search-card-controller.ts'
 import { en } from '../src/client/locales.ts'
 
 afterEach(cleanup)
@@ -20,21 +20,33 @@ function field(text: string, rest: Partial<SettingsFieldState> = {}): SettingsFi
   return { text, overridden: false, invalid: false, ...rest }
 }
 
+function baseState(overrides: Partial<WebSearchCardState> = {}): WebSearchCardState {
+  return {
+    ...settled,
+    baseURL: field(''),
+    endpointPlaceholder: 'https://api.deepseek.com/anthropic/v1/messages',
+    limitField: 'maxUses',
+    limit: field('5'),
+    limitLabelKey: 'maxUses',
+    limitHintKey: 'maxUsesHint',
+    apiKey: field(''),
+    apiKeyConfigured: false,
+    apiKeyWritable: true,
+    providers: [{ value: 'deepseek-official', labelKey: 'providerDeepseek' }],
+    showSelector: false,
+    selectedProviderId: 'deepseek-official',
+    selectorWritable: true,
+    ...overrides,
+  }
+}
+
 function cardActions() {
-  return { edit: vi.fn(), resetField: vi.fn(), save: vi.fn(), discard: vi.fn() }
+  return { edit: vi.fn(), resetField: vi.fn(), save: vi.fn(), discard: vi.fn(), selectProvider: vi.fn() }
 }
 
 describe('WebSearchCard', () => {
   function renderWebSearch(state: Partial<WebSearchCardState> = {}) {
-    const store = createSnapshotStore<WebSearchCardState>({
-      ...settled,
-      baseURL: field(''),
-      maxUses: field('5'),
-      apiKey: field(''),
-      apiKeyConfigured: false,
-      apiKeyWritable: true,
-      ...state,
-    })
+    const store = createSnapshotStore<WebSearchCardState>(baseState(state))
     const actions = cardActions()
     const props = { ...actions, view: 'page', t, useWebSearchCard: bindSnapshotSelector(store) } as WebSearchCardProps
     render(<WebSearchCard {...props} />)
@@ -42,9 +54,7 @@ describe('WebSearchCard', () => {
   }
 
   it('renders its one-liner alone in the summary view', () => {
-    const store = createSnapshotStore<WebSearchCardState>({
-      ...settled, baseURL: field(''), maxUses: field('5'), apiKey: field(''), apiKeyConfigured: false, apiKeyWritable: true,
-    })
+    const store = createSnapshotStore<WebSearchCardState>(baseState())
     const props = { ...cardActions(), view: 'summary', t, useWebSearchCard: bindSnapshotSelector(store) } as WebSearchCardProps
     render(<WebSearchCard {...props} />)
 
@@ -80,10 +90,16 @@ describe('WebSearchCard', () => {
     expect(screen.getByLabelText(en.baseUrl)).toHaveProperty('disabled', false)
   })
 
+  it('shows the selected provider\'s default endpoint faintly while the field is empty', () => {
+    renderWebSearch()
+
+    expect(screen.getByLabelText(en.baseUrl)).toHaveProperty('placeholder', 'https://api.deepseek.com/anthropic/v1/messages')
+  })
+
   it('stages the endpoint, the search budget, and their resets', () => {
     const actions = renderWebSearch({
       baseURL: field('https://search.test/v1', { overridden: true }),
-      maxUses: field('3', { overridden: true }),
+      limit: field('3', { overridden: true }),
     })
 
     fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://other.test' } })
@@ -97,5 +113,24 @@ describe('WebSearchCard', () => {
       ['maxUses', '4'],
     ])
     expect(actions.resetField.mock.calls).toEqual([['baseURL'], ['maxUses']])
+  })
+
+  it('renders the provider selector and stages the chosen provider', () => {
+    const providers: WebSearchProviderOption[] = [
+      { value: 'deepseek-official', labelKey: 'providerDeepseek' },
+      { value: 'ollama-cloud', labelKey: 'providerOllamaCloud' },
+    ]
+    const actions = renderWebSearch({ providers, showSelector: true })
+
+    expect(screen.getByRole('tablist', { name: en.providerLabel })).toBeTruthy()
+    fireEvent.click(screen.getByRole('tab', { name: en.providerOllamaCloud }))
+
+    expect(actions.selectProvider).toHaveBeenCalledWith('ollama-cloud')
+  })
+
+  it('omits the selector when only one provider is served', () => {
+    renderWebSearch()
+
+    expect(screen.queryByRole('tablist')).toBeNull()
   })
 })

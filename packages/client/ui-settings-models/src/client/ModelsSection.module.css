@@ -613,6 +613,30 @@
   font-size: 13px;
 }
 
+/* Peak routing of one model row: destination, window, and zone. */
+.routingFields {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+  padding-top: 8px;
+  border-top: 0.5px solid var(--dsw-alias-border-l3);
+}
+
+.routingFields > .modelFieldLabel,
+.routingHint {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.routingHint {
+  margin: 0;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
 .modelEmpty {
   padding: 12px;
   border: 1px dashed var(--dsw-alias-border-l3);

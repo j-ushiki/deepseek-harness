@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
+import { liveConfig } from '../../../settings/settings/tests/live-config.ts'
 import WebRuntime, {
   WebError,
   type WebFetchProvider,
@@ -34,7 +35,8 @@ function fetchResult(marker: string): WebFetchResult {
 }
 
 /** Mount a WebRuntime on a fresh root context with the given config. */
-async function mountWeb(config: ConstructorParameters<typeof WebRuntime>[1] = {}): Promise<{ ctx: Context; web: WebRuntime }> {
+type MountConfig = { searchProvider?: string; fetchProvider?: string }
+async function mountWeb(config: MountConfig = {}): Promise<{ ctx: Context; web: WebRuntime }> {
   const ctx = new Context()
   await ctx.plugin(WebRuntime, config)
   return { ctx, web: ctx.web }
@@ -211,5 +213,22 @@ describe('WebError', () => {
     const error = new WebError('boom', 'WEB_INVALID_URL')
     expect(error.code).toBe('WEB_INVALID_URL')
     expect(error.name).toBe('WebError')
+  })
+})
+
+describe('WebRuntime live search provider selection', () => {
+  it('serves a stored searchProvider to the next search without re-registering providers', async () => {
+    const ctx = new Context()
+    const live = await liveConfig(ctx, WebRuntime, { searchProvider: 'exa' })
+    const web = ctx.get('web')!
+    web.registerSearchProvider(makeSearchProvider('exa', available, () => Promise.resolve(searchResult('exa'))))
+    web.registerSearchProvider(makeSearchProvider('perplexity', available, () => Promise.resolve(searchResult('perplexity'))))
+
+    await expect(web.search({ query: 'q' })).resolves.toMatchObject({ content: 'exa' })
+
+    await live.update({ searchProvider: 'perplexity' })
+
+    await expect(web.search({ query: 'q' })).resolves.toMatchObject({ content: 'perplexity' })
+    await ctx.fiber.dispose()
   })
 })

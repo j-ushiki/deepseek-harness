@@ -22516,7 +22516,7 @@
         "packages/llm/llm/src/types.ts#ReplayEnvelope"
       ],
       "sources": [
-        "packages/llm/llm/src/types.ts:448"
+        "packages/llm/llm/src/types.ts:468"
       ]
     },
     {
@@ -22929,7 +22929,7 @@
       "digest": "2235d957bf4b7c6cf959231d480f0ba1f3a6d72d82981493fb6c7c963021d3d5",
       "names": [],
       "sources": [
-        "packages/session/working-directory/src/index.ts:29"
+        "packages/session/working-directory/src/index.ts:32"
       ]
     },
     {
@@ -23042,7 +23042,7 @@
       "digest": "2abb711460e6238d851c30f3e4bdd87a2aa1887ee70575b3d3b7b25610673095",
       "names": [],
       "sources": [
-        "packages/llm/llm/src/types.ts:473"
+        "packages/llm/llm/src/types.ts:493"
       ]
     },
     {
@@ -23297,7 +23297,7 @@
       "digest": "3bec87f9e6ab3da03346f49923d3c51621debc0159df68605e543c3b2a026f90",
       "names": [],
       "sources": [
-        "packages/llm/llm/src/types.ts:471"
+        "packages/llm/llm/src/types.ts:491"
       ]
     },
     {
@@ -23438,7 +23438,7 @@
         "packages/llm/llm/src/types.ts#StreamChunk"
       ],
       "sources": [
-        "packages/llm/llm/src/types.ts:470"
+        "packages/llm/llm/src/types.ts:490"
       ]
     },
     {
@@ -23546,7 +23546,7 @@
         "packages/workflow/workflow/src/types.ts#WorkflowRunId"
       ],
       "sources": [
-        "packages/api/session-controller/src/types.ts:409",
+        "packages/api/session-controller/src/types.ts:411",
         "packages/attachment/attachment/src/brand.ts:6",
         "packages/compaction/compaction/src/brand.ts:4",
         "packages/core/session/src/types.ts:21",
@@ -23951,7 +23951,7 @@
         "packages/llm/llm/src/types.ts#ToolSchema"
       ],
       "sources": [
-        "packages/llm/llm/src/types.ts:491"
+        "packages/llm/llm/src/types.ts:511"
       ]
     },
     {
@@ -24068,7 +24068,7 @@
       "digest": "6dacb1584f2bfbe209dc6b6f578d51da6d55595f64d0e63c727c98f359278def",
       "names": [],
       "sources": [
-        "packages/api/session-controller/src/types.ts:418"
+        "packages/api/session-controller/src/types.ts:420"
       ]
     },
     {
@@ -24473,7 +24473,7 @@
       "digest": "88a610b831be6d92612a464be5c7d0b88ec24d97bd299837bf74bf7672183c9a",
       "names": [],
       "sources": [
-        "packages/llm/llm/src/types.ts:474"
+        "packages/llm/llm/src/types.ts:494"
       ]
     },
     {
@@ -24631,7 +24631,7 @@
       "digest": "95080295115fbd83544520ba247b68a03790131f6a2eac323d388758cb542f65",
       "names": [],
       "sources": [
-        "packages/llm/llm/src/types.ts:472"
+        "packages/llm/llm/src/types.ts:492"
       ]
     },
     {
@@ -24824,7 +24824,7 @@
       "digest": "a2b49331716ba0a7078b026d145306a70eae64b7313c3e6204bd931e75ec3bb1",
       "names": [],
       "sources": [
-        "packages/llm/llm/src/types.ts:477"
+        "packages/llm/llm/src/types.ts:497"
       ]
     },
     {
@@ -25506,7 +25506,7 @@
       "digest": "d4b739491689cc6bb13d07ffac1a32239875abda364c0d5edd8f74faf5e9c00d",
       "names": [],
       "sources": [
-        "packages/llm/llm/src/types.ts:475"
+        "packages/llm/llm/src/types.ts:495"
       ]
     },
     {
@@ -25567,7 +25567,7 @@
       "digest": "da60ed58a8fa23d7aa4920ab5c1f4e3d28109cb0797ef9e5c8b125721b847582",
       "names": [],
       "sources": [
-        "packages/session/working-directory/src/index.ts:36"
+        "packages/session/working-directory/src/index.ts:39"
       ]
     },
     {
@@ -25914,7 +25914,7 @@
       "digest": "f1a96afe7503ac1817de769cd0ba13d9b80111c7034c50106b3344ecc14cc515",
       "names": [],
       "sources": [
-        "packages/llm/llm/src/types.ts:476"
+        "packages/llm/llm/src/types.ts:496"
       ]
     },
     {
@@ -25942,7 +25942,7 @@
         "packages/llm/llm/src/types.ts#SystemPromptUpdate"
       ],
       "sources": [
-        "packages/llm/llm/src/types.ts:414"
+        "packages/llm/llm/src/types.ts:434"
       ]
     },
     {

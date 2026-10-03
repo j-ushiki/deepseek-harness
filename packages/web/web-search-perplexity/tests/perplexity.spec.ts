@@ -95,6 +95,14 @@ describe('PerplexitySearchProvider request mapping', () => {
     expect(JSON.parse(init.body as string)).toEqual({ model: 'sonar', max_tokens: 1024, messages: [{ role: 'user', content: 'hello' }] })
   })
 
+  it('uses a configured full endpoint as-is instead of appending the operation path twice', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ choices: [{ message: { content: 'a' } }], citations: [] }))
+    vi.stubGlobal('fetch', fetchMock)
+    await new PerplexitySearchProvider({ ...options, baseURL: 'https://api.perplexity.test/chat/completions' }).search({ query: 'q' })
+    const [url] = fetchMock.mock.calls[0] as unknown as [string]
+    expect(url).toBe('https://api.perplexity.test/chat/completions')
+  })
+
   it('sends search_recency_filter when configured, and omits it otherwise', async () => {
     const fetchMock = vi.fn(async () => jsonResponse({ choices: [{ message: { content: 'a' } }], citations: [] }))
     vi.stubGlobal('fetch', fetchMock)

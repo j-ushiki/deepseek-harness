@@ -1,0 +1,16 @@
+/* The provider selector above the selected provider's fields. */
+
+.provider {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 0.5px solid var(--dsw-alias-border-l2);
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-primary);
+}

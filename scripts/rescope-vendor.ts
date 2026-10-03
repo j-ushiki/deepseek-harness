@@ -138,6 +138,30 @@ const GENERIC_SKIPS: readonly GenericSkip[] = [
   { file: 'packages/extensions/ui-cordis/src/client/CordisPreparingRow.tsx', upstream: ['cordis'] },
   { file: 'packages/extensions/ui-cordis/src/client/CordisRunRow.tsx', upstream: ['cordis'] },
   { file: 'packages/extensions/ui-cordis/src/client/locales.ts', upstream: ['cordis'] },
+  // The language pack carries the same UI locale namespace id in its dictionary.
+  { file: 'packages/client/locale-ja/src/client/dicts/cordis.ts', upstream: ['cordis'] },
+  { file: 'packages/client/locale-ja/src/client/dicts/index.ts', upstream: ['cordis'] },
+  // These sites name the `cordis` agent preset, not a package.
+  { file: 'apps/cli/tests/optional-bundle-transitions.e2e.ts', upstream: ['cordis'] },
+  { file: 'apps/web/tests/agent-preset-selection.e2e.ts', upstream: ['cordis'] },
+  { file: 'apps/web/tests/developer-tools-settings.e2e.ts', upstream: ['cordis'] },
+  { file: 'packages/bundle/web-app/cordis.patch.yml', upstream: ['cordis'] },
+  { file: 'packages/client/ui-agent-preset/src/client/CreatePluginMenuItem.tsx', upstream: ['cordis'] },
+  { file: 'packages/client/ui-agent-preset/tests/components.client.spec.tsx', upstream: ['cordis'] },
+  { file: 'packages/client/ui-agent-preset/tests/create-plugin-menu-item.client.spec.tsx', upstream: ['cordis'] },
+  { file: 'packages/client/ui-agent-preset/tests/section-store.client.spec.ts', upstream: ['cordis'] },
+  { file: 'docs/subsystems/schedule.md', upstream: ['cordis'] },
+  { file: 'docs/subsystems/schedule.zh.md', upstream: ['cordis'] },
+  { file: 'docs/upgrade-guide/v0.2.0-rc.2/schedule-bundle-retired/guide.md', upstream: ['cordis'] },
+  { file: 'docs/upgrade-guide/v0.2.0-rc.2/schedule-bundle-retired/guide.zh.md', upstream: ['cordis'] },
+  { file: 'docs/upgrade-guide/v0.2.1-alpha.1/subagent-preset-composition/guide.md', upstream: ['cordis'] },
+  { file: 'docs/upgrade-guide/v0.2.1-alpha.1/subagent-preset-composition/guide.zh.md', upstream: ['cordis'] },
+  { file: 'docs/user/guide/schedule.md', upstream: ['cordis'] },
+  { file: 'docs/user/guide/schedule.zh.md', upstream: ['cordis'] },
+  // `cordis/inspect-*` is the Inspector observation topic, not a package subpath.
+  { file: 'packages/extensions/cordis-host-runner/tests/inspect-registry.spec.ts', upstream: ['cordis'] },
+  { file: 'snapshots/session/cordis-inspect-liveness/client-fixture.mjs', upstream: ['cordis'] },
+  { file: 'snapshots/session/cordis-inspect-timeout/client-fixture.mjs', upstream: ['cordis'] },
 ]
 
 /** A string that must appear exactly `count` times once the rescope has run. */

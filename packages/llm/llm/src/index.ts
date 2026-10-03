@@ -19,6 +19,8 @@ import type {
   LlmModelContext,
   LlmModelDiscoveryRequest,
   LlmModelInfo,
+  LlmModelRouting,
+  LlmRoutingWindow,
   LlmResolvedModelInfo,
   LlmProviderInfo,
   ModelModality,
@@ -709,6 +711,42 @@ export class LlmRuntime extends TypertRemoteService {
   }
 
   /**
+   * Detach one adapter-owned routing declaration.
+   * @param routing - declared windows, when the adapter reports any.
+   * @param code - failure code naming this call's validation site.
+   * @param subject - provider and model, for the diagnostic.
+   * @returns a detached copy, or `undefined` when the adapter declared none.
+   */
+  private detachedRouting(
+    routing: LlmModelRouting | undefined,
+    code: 'INVALID_CATALOG' | 'INVALID_MODEL_INFO',
+    subject: string,
+  ): LlmModelRouting | undefined {
+    if (routing === undefined) return undefined
+    if (!Array.isArray(routing.windows) || routing.windows.length === 0) {
+      throw new LlmError(`adapter returned invalid routing metadata for ${subject}`, code)
+    }
+    // The runtime check above narrows the array to `any[]`; re-annotating it
+    // keeps the detached copy's element type, and its validation, declared.
+    const windows: readonly LlmRoutingWindow[] = routing.windows
+    return {
+      windows: windows.map((entry) => {
+        if (typeof entry.from !== 'string' || typeof entry.to !== 'string'
+          || typeof entry.provider !== 'string' || entry.provider.length === 0
+          || (entry.timeZone !== undefined && typeof entry.timeZone !== 'string')) {
+          throw new LlmError(`adapter returned invalid routing window for ${subject}`, code)
+        }
+        return {
+          from: entry.from,
+          to: entry.to,
+          provider: entry.provider,
+          ...entry.timeZone === undefined ? {} : { timeZone: entry.timeZone },
+        }
+      }),
+    }
+  }
+
+  /**
    * Discover models advertised by one registered provider. Catalog membership
    * does not constrain core routing. Catalog-driven entry points may restrict
    * selection and submission to the advertised models.
@@ -734,12 +772,14 @@ export class LlmRuntime extends TypertRemoteService {
       }
       seen.add(model.id)
       const inputModalities = this.detachedModalities(model.inputModalities)
+      const routing = this.detachedRouting(model.routing, 'INVALID_CATALOG', `provider "${provider}"`)
       return {
         provider: model.provider,
         id: model.id,
         name: model.name,
         ...model.description === undefined ? {} : { description: model.description },
         ...inputModalities === undefined ? {} : { inputModalities },
+        ...routing === undefined ? {} : { routing },
       }
     })
   }
@@ -801,6 +841,11 @@ export class LlmRuntime extends TypertRemoteService {
     // Capability metadata rides through: an explicit modality omission is
     // negative capability downstream preflights act on (image admission).
     const inputModalities = this.detachedModalities(resolved.inputModalities)
+    const routing = this.detachedRouting(
+      resolved.routing,
+      'INVALID_MODEL_INFO',
+      `provider "${provider}" model "${model}"`,
+    )
     // Widened: adapters derive this mode from catalog config, so the value is checked as a string.
     const systemPromptUpdate: string | undefined = resolved.systemPromptUpdate
     if (systemPromptUpdate !== undefined && systemPromptUpdate !== 'in-history') {
@@ -831,6 +876,7 @@ export class LlmRuntime extends TypertRemoteService {
       name: resolved.name,
       ...resolved.description === undefined ? {} : { description: resolved.description },
       ...inputModalities === undefined ? {} : { inputModalities },
+      ...routing === undefined ? {} : { routing },
       ...context === undefined ? {} : { context: { contextWindow: context.contextWindow } },
       ...defaultMaxTokens === undefined ? {} : { defaultMaxTokens },
       ...resolved.systemPromptUpdate === undefined ? {} : { systemPromptUpdate: resolved.systemPromptUpdate },

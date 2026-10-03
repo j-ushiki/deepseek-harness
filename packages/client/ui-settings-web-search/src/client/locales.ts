@@ -5,23 +5,34 @@ import type { SettingsFormLabels } from '@deepseek-ai/dsh-client-ui-primitives'
 /** Locale keys the page renders. */
 export type WebSearchSettingsLocaleKey =
   | 'title' | 'description'
+  | 'providerLabel' | 'providerDeepseek' | 'providerOllamaCloud' | 'providerExa' | 'providerPerplexity'
   | 'apiKey' | 'apiKeyHint' | 'apiKeySet' | 'apiKeyUnset'
-  | 'baseUrl' | 'baseUrlHint' | 'maxUses' | 'maxUsesHint'
+  | 'baseUrl' | 'baseUrlHint'
+  | 'maxUses' | 'maxUsesHint' | 'maxResults' | 'maxResultsHint' | 'maxTokens' | 'maxTokensHint'
   | 'overridden' | 'reset' | 'readOnly' | 'unavailable'
   | 'save' | 'saving' | 'saveFailed' | 'invalidNumber'
 
 /** English copy. */
 export const en: Record<WebSearchSettingsLocaleKey, string> = {
   title: 'Web search',
-  description: 'Set up the DeepSeek search provider.',
+  description: 'Choose which search provider the web search tool uses.',
+  providerLabel: 'Search provider',
+  providerDeepseek: 'DeepSeek',
+  providerOllamaCloud: 'Ollama Cloud',
+  providerExa: 'Exa',
+  providerPerplexity: 'Perplexity',
   apiKey: 'API key',
   apiKeyHint: 'Stored outside the settings file. Leave blank to keep the current key.',
   apiKeySet: 'A key is configured.',
-  apiKeyUnset: 'No key is configured; only conversations using a DeepSeek Account model can search, through the default endpoint.',
+  apiKeyUnset: 'No key is configured; search is unavailable until one is set.',
   baseUrl: 'Endpoint',
   baseUrlHint: 'Leave blank to use the provider default.',
   maxUses: 'Max searches per request',
   maxUsesHint: 'How many times one request may search before it must answer.',
+  maxResults: 'Max results',
+  maxResultsHint: 'How many results one search may return.',
+  maxTokens: 'Max answer tokens',
+  maxTokensHint: 'Upper bound on the generated answer, in tokens.',
   overridden: 'Overridden',
   reset: 'Reset to default',
   readOnly: 'This deployment stores settings read-only.',
@@ -35,15 +46,24 @@ export const en: Record<WebSearchSettingsLocaleKey, string> = {
 /** Simplified Chinese copy. */
 export const zh: Record<WebSearchSettingsLocaleKey, string> = {
   title: '网页搜索',
-  description: '设置 DeepSeek 的搜索提供方。',
+  description: '选择网页搜索工具使用的搜索提供方。',
+  providerLabel: '搜索提供方',
+  providerDeepseek: 'DeepSeek',
+  providerOllamaCloud: 'Ollama Cloud',
+  providerExa: 'Exa',
+  providerPerplexity: 'Perplexity',
   apiKey: 'API Key',
   apiKeyHint: '不写入设置文件。留空表示保持当前密钥。',
   apiKeySet: '已配置密钥。',
-  apiKeyUnset: '未配置密钥；仅使用 DeepSeek 账号模型的对话可以通过默认接口地址搜索。',
+  apiKeyUnset: '未配置密钥；设置之前无法进行搜索。',
   baseUrl: '接口地址',
   baseUrlHint: '留空则使用提供方默认地址。',
   maxUses: '单次请求最多搜索次数',
   maxUsesHint: '一次请求在必须作答前最多可以搜索多少次。',
+  maxResults: '最大结果数',
+  maxResultsHint: '单次搜索最多返回多少条结果。',
+  maxTokens: '最大回答 token 数',
+  maxTokensHint: '生成回答的 token 上限。',
   overridden: '已覆盖',
   reset: '恢复默认',
   readOnly: '本部署的设置为只读。',

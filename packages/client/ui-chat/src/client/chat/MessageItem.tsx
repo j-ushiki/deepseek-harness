@@ -4,12 +4,14 @@ import type { PendingSubmission } from '@deepseek-ai/dsh-api-session-controller/
 import type { PropsRenderFactories } from '@deepseek-ai/dsh-client-ui-slots'
 import type { UserTextFacts } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { JsonBlock, StateDot, TextShimmer } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { ClockTimeZone } from '../../chat-settings.ts'
 import type {
   ChatNodeOwnerProps, ChatNodeViewProps, ChatViewSlotProps, UserContentAttachment, UserContentData, UserContentInput,
 } from '../contract/slots.ts'
 import type { ModelRetryNode, TurnErrorNode, UserMessageNode } from '../contract/snapshot.ts'
 import { CompactionItem } from './CompactionItem.tsx'
 import { ContextInjectionRow } from './ContextInjectionRow.tsx'
+import { MessageClock } from './MessageClock.tsx'
 import { MessageIconActions } from './MessageIconActions.tsx'
 import css from './MessageItem.module.css'
 
@@ -162,13 +164,15 @@ function TurnMaxTokensItem({ t }: {
 
 /** Right-aligned bubble shared by user and steering rows. */
 function UserStyleBubble({
-  content, loadImage, renderFactorySlot, actions, pending = false, echo = false, referenceLabels, skillNames,
+  content, loadImage, renderFactorySlot, actions, clock, pending = false, echo = false, referenceLabels, skillNames,
   previewAttachments, facts: inputFacts = EMPTY_TEXT_FACTS, interactive = false,
 }: {
   content: readonly unknown[]
   renderFactorySlot: PropsRenderFactories['renderFactorySlot']
   /** Optional IconActions (or similar) below the bubble; receives the joined text. */
   actions?: (text: string) => ReactNode
+  /** Optional timestamp line above the attachments and bubble. */
+  clock?: ReactNode
   /** Whether this is the Host-authoritative pre-admission steering projection. */
   pending?: boolean
   /** Whether this is a local submission echo (invisible marker; the echo renders exactly like its durable replacement). */
@@ -206,6 +210,7 @@ function UserStyleBubble({
         facts,
         interactive,
       })}
+      {clock}
       {actions?.(prepared.text)}
     </div>
   )
@@ -231,8 +236,7 @@ export function PendingSteeringBubble({ content, loadImage, renderFactorySlot, t
       actions={text => (
         <MessageIconActions
           text={text}
-          clock="start"
-          className={css.actions}
+          variant="user"
           t={t}
         />
       )}
@@ -248,9 +252,10 @@ export function PendingSteeringBubble({ content, loadImage, renderFactorySlot, t
  * @param props - the pending submission, authorized image loader, and render seats.
  * @returns the echoed user bubble.
  */
-export function PendingSubmissionBubble({ submission, loadImage, renderFactorySlot, t }: {
+export function PendingSubmissionBubble({ submission, loadImage, renderFactorySlot, clockTimeZone, t }: {
   submission: PendingSubmission
   renderFactorySlot: PropsRenderFactories['renderFactorySlot']
+  clockTimeZone: ClockTimeZone
   t: ChatViewSlotProps['t']
 } & Pick<ChatNodeOwnerProps, 'loadImage'>): ReactNode {
   const content = useMemo(
@@ -281,12 +286,11 @@ export function PendingSubmissionBubble({ submission, loadImage, renderFactorySl
       loadImage={loadImage}
       pending={submission.placement === 'steering'}
       echo
+      clock={<MessageClock time={submission.time} zone={clockTimeZone} className={css.clock} t={t} />}
       actions={text => (
         <MessageIconActions
           text={text}
-          time={submission.time}
-          clock="start"
-          className={css.actions}
+          variant="user"
           t={t}
         />
       )}
@@ -296,7 +300,7 @@ export function PendingSubmissionBubble({ submission, loadImage, renderFactorySl
 
 /** User and admitted-steering keyed Chat renderer. */
 export const UserMessageNodeView = memo(function UserMessageNodeView({
-  node, renderFactorySlot, loadImage, t,
+  node, renderFactorySlot, loadImage, clockTimeZone, t,
 }: ChatNodeViewProps<'user' | 'steering'>) {
   const data = node.data
   return (
@@ -307,12 +311,11 @@ export const UserMessageNodeView = memo(function UserMessageNodeView({
       loadImage={loadImage}
       {...data.referenceLabels === undefined ? {} : { referenceLabels: data.referenceLabels }}
       {...data.skillNames === undefined ? {} : { skillNames: data.skillNames }}
+      clock={<MessageClock time={data.time} zone={clockTimeZone} className={css.clock} t={t} />}
       actions={text => (
         <MessageIconActions
           text={text}
-          time={data.time}
-          clock="start"
-          className={css.actions}
+          variant="user"
           t={t}
         />
       )}

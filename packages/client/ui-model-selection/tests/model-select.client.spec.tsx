@@ -8,6 +8,7 @@ import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { ComponentProps } from 'react'
 import type { ModelDirectoryState } from '../src/client/directory.ts'
 import { ModelSelect } from '../src/client/ModelSelect.tsx'
+import { activeRoutingWindow } from '../src/client/routing.ts'
 import { en, zh } from '../src/client/locales.ts'
 import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts'
 
@@ -99,8 +100,8 @@ describe('ModelSelect label slot', () => {
       <ModelSelect locked={false} available directory={directory} load={vi.fn()} select={select} t={t} renderSlot={renderSlot} />
     </SessionProvider>)
     runtime.renderRoot()
-    const trigger = screen.getByRole('button', { name: '选择模型，当前 Same model' })
-    expect(trigger.textContent).toBe('Same model')
+    const trigger = screen.getByRole('button', { name: '选择模型，当前 trusted gateway · Same model' })
+    expect(trigger.textContent).toBe('trusted gateway · Same model')
     const plugin = await runtime.mount({ inject: ['slots'], apply(ctx) {
       ctx.slots.inject('conversation.input.model.label', () => ctx.slots.register({
         name: 'conversation.input.model.label',
@@ -129,7 +130,7 @@ describe('ModelSelect label slot', () => {
     await waitFor(() => { expect(document.activeElement).toBe(trigger) })
     await act(async () => { await plugin.dispose() })
     expect(runtime.slots.entries('conversation.input.model.label')).toHaveLength(0)
-    expect(trigger.textContent).toBe('Same model')
+    expect(trigger.textContent).toBe('external gateway · Same model')
     expect(trigger.querySelector('[data-provider-id="external"][data-model-id="same-model"]')).toBeTruthy()
     fireEvent.click(trigger)
     fireEvent.click(screen.getByRole('menuitem', { name: /^模型/ }))
@@ -165,7 +166,7 @@ describe('ModelSelect reasoning effort', () => {
     />)
 
     const trigger = screen.getByRole('button', {
-      name: '选择模型，当前 DeepSeek-V4-Flash，推理等级 High',
+      name: '选择模型，当前 DeepSeek · DeepSeek-V4-Flash，推理等级 High',
     })
     fireEvent.click(trigger)
     fireEvent.click(screen.getByRole('menuitem', { name: /推理等级/ }))
@@ -180,9 +181,27 @@ describe('ModelSelect reasoning effort', () => {
         model: 'deepseek-v4-flash',
         reasoningEffort: 'max',
       })
-      expect(trigger.getAttribute('aria-label')).toBe('选择模型，当前 DeepSeek-V4-Flash，推理等级 Max')
+      expect(trigger.getAttribute('aria-label')).toBe('选择模型，当前 DeepSeek · DeepSeek-V4-Flash，推理等级 Max')
       expect(document.activeElement).toBe(trigger)
     })
+  })
+
+  it('leads the model with its provider name in the trigger and lists the provider above the root cells', () => {
+    render(<ModelSelect renderSlot={renderLabel}
+      locked={false}
+      available
+      directory={createSnapshotStore<ModelDirectoryState>(state())}
+      load={vi.fn()}
+      select={vi.fn().mockResolvedValue({ ok: true, value: undefined })}
+      t={t}
+    />)
+
+    const trigger = screen.getByRole('button', { name: /选择模型，当前/ })
+    expect(trigger.textContent).toBe('DeepSeek · DeepSeek-V4-FlashHigh')
+    fireEvent.click(trigger)
+    expect(screen.getByText('提供商').parentElement?.textContent).toBe('提供商DeepSeek')
+    expect(screen.getByRole('menuitem', { name: /^模型/ }).textContent).toBe('模型DeepSeek-V4-Flash')
+    expect(screen.getByRole('menuitem', { name: /推理等级/ }).textContent).toBe('推理等级High')
   })
 
   it('offers provider default only when the adapter does not configure a model default', () => {
@@ -208,7 +227,7 @@ describe('ModelSelect reasoning effort', () => {
     />)
 
     fireEvent.click(screen.getByRole('button', {
-      name: '选择模型，当前 Model，推理等级 Default',
+      name: '选择模型，当前 Provider · Model，推理等级 Default',
     }))
     fireEvent.click(screen.getByRole('menuitem', { name: /推理等级/ }))
     expect(screen.getAllByRole('menuitemradio').map(item => item.textContent))
@@ -232,6 +251,7 @@ describe('ModelSelect reasoning effort', () => {
     const trigger = screen.getByRole('button', { name: '请选择模型' })
     expect(trigger.textContent).toBe('请选择模型')
     fireEvent.click(trigger)
+    expect(screen.queryByText('提供商')).toBeNull()
     expect(screen.queryByRole('menuitem', { name: /推理等级/ })).toBeNull()
     expect(screen.queryByRole('menuitem', { name: /模型/ })).toBeNull()
     expect(screen.queryByRole('menuitemradio', { name: 'removed-model' })).toBeNull()
@@ -281,7 +301,7 @@ describe('ModelSelect reasoning effort', () => {
     directory.set(state())
     await waitFor(() => {
       expect(screen.getByRole('button', {
-        name: '选择模型，当前 DeepSeek-V4-Flash，推理等级 High',
+        name: '选择模型，当前 DeepSeek · DeepSeek-V4-Flash，推理等级 High',
       })).toBeTruthy()
     })
   })
@@ -983,10 +1003,64 @@ it('restores the account model name after login without changing the saved route
   const selected = { provider: 'deepseek-account', model: 'deepseek-flash', reasoningEffort: 'high' }
   const directory = createSnapshotStore(state({ current: selected, groups, retainedEffort: 'High' }))
   render(<ModelSelect renderSlot={renderLabel} locked={false} available directory={directory} load={vi.fn()} select={vi.fn()} t={t} />)
-  expect(screen.getByRole('button', { name: /选择模型，当前/ }).textContent).toBe('DeepSeek FlashHigh')
+  expect(screen.getByRole('button', { name: /选择模型，当前/ }).textContent).toBe('DeepSeek 账号 · DeepSeek FlashHigh')
   act(() => { directory.update((snapshot) => { snapshot.groups = []; snapshot.routable = false }) })
   expect(screen.getByRole('button', { name: '请选择模型' }).textContent).toBe('请选择模型')
   act(() => { directory.update((snapshot) => { snapshot.groups = groups; snapshot.routable = true }) })
-  expect(screen.getByRole('button', { name: /选择模型，当前/ }).textContent).toBe('DeepSeek FlashHigh')
+  expect(screen.getByRole('button', { name: /选择模型，当前/ }).textContent).toBe('DeepSeek 账号 · DeepSeek FlashHigh')
   expect(directory.getSnapshot().current).toEqual(selected)
+})
+
+describe('routing window evaluation', () => {
+  const routing = { windows: [{ from: '21:00', to: '03:00', timeZone: 'UTC', provider: 'opencode-go' }] }
+
+  it('matches inside an overnight window and treats the end as exclusive', () => {
+    expect(activeRoutingWindow(routing, Date.UTC(2026, 0, 1, 22, 0))?.provider).toBe('opencode-go')
+    expect(activeRoutingWindow(routing, Date.UTC(2026, 0, 1, 2, 0))?.provider).toBe('opencode-go')
+    expect(activeRoutingWindow(routing, Date.UTC(2026, 0, 1, 3, 0))).toBeUndefined()
+    expect(activeRoutingWindow(routing, Date.UTC(2026, 0, 1, 12, 0))).toBeUndefined()
+  })
+
+  it('reads a window without a zone in the browser zone', () => {
+    const allDay = { windows: [{ from: '00:00', to: '23:59', provider: 'somewhere' }] }
+    expect(activeRoutingWindow(allDay, Date.UTC(2026, 0, 1, 12, 0))?.provider).toBe('somewhere')
+  })
+})
+
+describe('ModelSelect routing indicator', () => {
+  const routedState = (): ModelDirectoryState => state({
+    current: { provider: 'ollama-cloud', model: 'deepseek-v4.1-flash' },
+    groups: [
+      {
+        id: 'ollama-cloud',
+        name: 'Ollama Cloud',
+        models: [{
+          id: 'deepseek-v4.1-flash',
+          name: 'DeepSeek V4.1 Flash',
+          routing: { windows: [{ from: '21:00', to: '03:00', timeZone: 'UTC', provider: 'opencode-go' }] },
+        }],
+      },
+      { id: 'opencode-go', name: 'OpenCode Go', models: [{ id: 'deepseek-v4.1-flash', name: 'DeepSeek V4.1 Flash' }] },
+    ],
+  })
+
+  it('marks the model while a routing window is active', () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(Date.UTC(2026, 0, 1, 21, 30))
+    onTestFinished(() => { now.mockRestore() })
+    render(<ModelSelect renderSlot={renderLabel} locked={false} available
+      directory={createSnapshotStore(routedState())} load={vi.fn()} select={vi.fn()} t={t} />)
+    const trigger = screen.getByRole('button', { name: /自动/ })
+    expect(trigger.textContent).toBe('OpenCode Go (自动) · DeepSeek V4.1 Flash')
+    fireEvent.click(trigger)
+    expect(screen.getByText('提供商').parentElement?.textContent).toBe('提供商OpenCode Go (自动)')
+  })
+
+  it('hides the mark outside every window', () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(Date.UTC(2026, 0, 1, 12, 0))
+    onTestFinished(() => { now.mockRestore() })
+    render(<ModelSelect renderSlot={renderLabel} locked={false} available
+      directory={createSnapshotStore(routedState())} load={vi.fn()} select={vi.fn()} t={t} />)
+    expect(screen.queryByText(/自动/)).toBeNull()
+    expect(screen.getByRole('button', { name: /Ollama Cloud/ }).textContent).toBe('Ollama Cloud · DeepSeek V4.1 Flash')
+  })
 })

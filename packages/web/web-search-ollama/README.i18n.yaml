@@ -1,0 +1,61 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/web/web-search-ollama/README.md
+/:
+  en: 1dc791cb4178f291
+  zh: fbc563f6556982e2
+/deepseek-ai-dsh-web-search-ollama:
+  en: 5f50d4bfd9a59c45
+  zh: 791ca64b5d5f25e5
+/deepseek-ai-dsh-web-search-ollama/summary:
+  en: 2e94b8c631a5ed7f
+  zh: 5203ac1038ff94c4
+/deepseek-ai-dsh-web-search-ollama/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 09388d293f9be9cb
+/deepseek-ai-dsh-web-search-ollama/use-this-package:
+  en: ef86439670c88043
+  zh: 23b40e85c261ae86
+/deepseek-ai-dsh-web-search-ollama/use-this-package/when-to-choose-it:
+  en: ee9f3b066a1189f1
+  zh: c39fc27e60c0bc7d
+/deepseek-ai-dsh-web-search-ollama/use-this-package/minimal-configuration:
+  en: 5564ca51810299eb
+  zh: 668b098fc5751805
+/deepseek-ai-dsh-web-search-ollama/use-this-package/what-a-search-returns:
+  en: 6d69472846269820
+  zh: ad975a5e6e192275
+/deepseek-ai-dsh-web-search-ollama/use-this-package/failures-and-recovery:
+  en: ec5d237f06e7bef3
+  zh: 78ab931c5387ca43
+/deepseek-ai-dsh-web-search-ollama/understand-the-implementation:
+  en: 9842c69ad3636bb3
+  zh: 5fcdb1b7b8a00441
+/deepseek-ai-dsh-web-search-ollama/understand-the-implementation/design-philosophy:
+  en: 5383dc49c9548804
+  zh: 37b5856ed9ed039b
+/deepseek-ai-dsh-web-search-ollama/understand-the-implementation/source-map:
+  en: db17752c38c62944
+  zh: 56c23f91597df36a
+/deepseek-ai-dsh-web-search-ollama/understand-the-implementation/request-flow:
+  en: 27b37388705dc4ba
+  zh: 16466f7634383925
+/deepseek-ai-dsh-web-search-ollama/further-exploration:
+  en: 34a8f772674d5b0b
+  zh: b622542312f820ab
+/deepseek-ai-dsh-web-search-ollama/model-experience:
+  en: 5225c8d3722ec320
+  zh: 063bc85c84509b99
+/deepseek-ai-dsh-web-search-ollama/model-experience/kv-cache-effect:
+  en: 40294c1c31b74824
+  zh: c7c1acd58792f945
+/deepseek-ai-dsh-web-search-ollama/known-limitations-and-deferred-work:
+  en: d089b14fbf98e740
+  zh: c31e860d4628dacc
+/deepseek-ai-dsh-web-search-ollama/known-limitations-and-deferred-work/dev-note:
+  en: 7f775cc79dbce94b
+  zh: 61d2ffb39c0ebf8f
+/deepseek-ai-dsh-web-search-ollama/known-limitations-and-deferred-work/dev-note/future-wider-ollama-control-surface:
+  en: 1db2ea08d36d8799
+  zh: 1e31b55c1e5b1916

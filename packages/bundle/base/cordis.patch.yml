@@ -473,6 +473,11 @@
       config:
         apiKeyEnv: DEEPSEEK_API_KEY
 
+    - id: web-search-ollama
+      name: '@deepseek-ai/dsh-web-search-ollama'
+      config:
+        apiKeyEnv: OLLAMA_CLOUD_API_KEY
+
     - id: web-fetch-http
       name: '@deepseek-ai/dsh-web-fetch-http'
 

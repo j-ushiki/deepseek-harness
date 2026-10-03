@@ -526,6 +526,28 @@ interface LlmNativeAuth {
 ```
 
 ```ts type-equiv
+/** One local wall-clock window an adapter routes a model through another provider. */
+interface LlmRoutingWindow {
+  /** Inclusive local start as `HH:mm`. */
+  from: string
+  /** Exclusive local end as `HH:mm`; earlier than {@link from} crosses midnight. */
+  to: string
+  /** IANA time zone the window is read in; absence means the reader's own zone. */
+  timeZone?: string
+  /** Provider route that serves this window's requests. */
+  provider: string
+}
+```
+
+```ts type-equiv
+/** Time windows a deployment configured for one model entry. */
+interface LlmModelRouting {
+  /** The windows in configuration order; the model is routed in any of them. */
+  windows: readonly LlmRoutingWindow[]
+}
+```
+
+```ts type-equiv
 /** One adapter-discovered model; catalog membership is advisory, not request validation. */
 interface LlmModelInfo {
   /** Provider route that owns this model entry. */
@@ -538,8 +560,12 @@ interface LlmModelInfo {
   description?: string
   /** Accepted request modalities; absent means unknown, while an explicit omission is negative capability. */
   inputModalities?: readonly ModelModality[]
+  /** Windows in which the route's requests go to another provider; absent means none. */
+  routing?: LlmModelRouting
 }
 ```
+
+An adapter that serves one model through more than one provider declares the local windows in `LlmModelInfo.routing`, so a selector can mark the model while one is active; the declaration is display metadata, not a second routing authority.
 
 Correctness-sensitive metadata is resolved separately from the advisory catalog and is owned by the adapter serving the exact route. Context capacity, adapter call defaults, reasoning choices, and the system prompt update mode share one exact-model result so consumers do not repeat authoritative model resolution. `SystemPromptUpdate` has the single value `'in-history'`: the model reads the latest `system` message at any position of `messages` as the complete effective system prompt, so the agent loop can append a changed prompt after the cached history instead of rewriting message 0 ([decision rule](../../packages/core/agent-loop/README.md#understand-the-implementation)); an absent mode means only a leading system message is read, and `normalizeModelInfo` rejects any other value with `INVALID_MODEL_INFO`.
 

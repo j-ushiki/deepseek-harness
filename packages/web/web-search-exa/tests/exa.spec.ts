@@ -106,6 +106,14 @@ describe('ExaSearchProvider request mapping', () => {
     })
   })
 
+  it('uses a configured full endpoint as-is instead of appending the operation path twice', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ results: [] }))
+    vi.stubGlobal('fetch', fetchMock)
+    await new ExaSearchProvider({ ...options, baseURL: 'https://api.exa.test/search' }).search({ query: 'q' })
+    const [url] = fetchMock.mock.calls[0] as unknown as [string]
+    expect(url).toBe('https://api.exa.test/search')
+  })
+
   it('falls back to the configured numResults when a request omits maxResults', async () => {
     const fetchMock = vi.fn(async () => jsonResponse({ results: [] }))
     vi.stubGlobal('fetch', fetchMock)

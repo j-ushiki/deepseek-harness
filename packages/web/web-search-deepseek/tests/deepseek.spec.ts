@@ -214,6 +214,14 @@ describe('DeepSeekSearchProvider request mapping', () => {
     expect(recordRequest.mock.invocationCallOrder[0]).toBeLessThan(fetchMock.mock.invocationCallOrder[0] ?? 0)
   })
 
+  it('uses a configured full endpoint as-is instead of appending the operation path twice', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse(searchResponse()))
+    vi.stubGlobal('fetch', fetchMock)
+    await searchProvider({ ...options, baseURL: 'https://api.deepseek.test/anthropic/v1/messages' }).search({ query: 'q' })
+    const [url] = fetchMock.mock.calls[0] as unknown as [string]
+    expect(url).toBe('https://api.deepseek.test/anthropic/v1/messages')
+  })
+
   it('forwards the abort signal', async () => {
     const fetchMock = vi.fn(async () => jsonResponse(searchResponse()))
     vi.stubGlobal('fetch', fetchMock)
