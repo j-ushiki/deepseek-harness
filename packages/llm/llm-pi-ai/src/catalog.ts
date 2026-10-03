@@ -1,9 +1,10 @@
 /**
- * Materialization of one provider route's model catalog. The installed pi-ai
- * catalog supplies defaults keyed by model id, and a profile's own model
- * entries override them field by field, so a route naming a catalog provider
- * stays configuration-free while a route pi-ai has never heard of is fully
- * describable from `cordis.patch.yml`.
+ * Materialization of one provider route's model catalog. The described
+ * defaults — pi-ai's installed catalog entries, or this build's bundled ones
+ * for a route pi-ai does not ship — supply values keyed by model id, and a
+ * profile's own model entries override them field by field, so a route naming a
+ * described provider stays configuration-free while a route nothing describes
+ * is fully describable from `cordis.patch.yml`.
  *
  * Strict resolution rejects unserviceable models before settings writes.
  * Deferred resolution retains their diagnostics so stored catalog drift does
@@ -14,6 +15,9 @@
 
 import { builtinProviders, getAllBuiltinModels, getBuiltinModels } from '@earendil-works/pi-ai/providers/all'
 import type { BuiltinProvider } from '@earendil-works/pi-ai/providers/all'
+import { bundledModel, bundledProvider, BUNDLED_PROVIDERS } from './bundled-catalog.ts'
+import { CLOCK_TIME } from './peak.ts'
+import type { PiAiPeakWindow } from './peak.ts'
 import type {
   AnthropicMessagesCompat,
   Api,
@@ -191,30 +195,42 @@ function catalogProviders(): Map<string, Provider> {
 
 /**
  * The installed catalog provider for one route, when pi-ai ships one this
- * adapter serves.
+ * adapter serves. A bundled route answers `undefined` here: this returns a
+ * provider that can serve requests, and a bundle carries data rather than a
+ * protocol implementation.
  * @param provider - provider route key.
- * @returns the catalog provider, or `undefined` for a route pi-ai does not ship
- *   or ships without a chat model.
+ * @returns the catalog provider, or `undefined` for a route pi-ai does not
+ *   ship, ships without a chat model, or the bundle only describes.
  */
 export function catalogProvider(provider: string): Provider | undefined {
   return catalogProviders().get(provider)
 }
 
 /**
- * Every provider route the installed pi-ai catalog ships and this adapter
- * serves: a provider whose catalog lists models but no chat model is left out.
- * @returns the catalog provider ids, in catalog order.
+ * Every provider route this build describes, in the order configuration
+ * surfaces offer them: what pi-ai ships and this adapter serves, then the
+ * bundled routes above.
+ *
+ * The merged list is sorted because the installed catalog is already in that
+ * order and a bundled route belongs where its name reads, not appended after
+ * every installed one — this list is what a provider picker renders.
+ * @returns the catalog provider ids.
  */
 export function catalogProviderIds(): readonly string[] {
-  return [...catalogProviders().keys()]
+  return [...catalogProviders().keys(), ...BUNDLED_PROVIDERS.map(bundle => bundle.id)].sort()
 }
 
 /**
- * The installed catalog models for one route, indexed by model id.
+ * The described models for one route, indexed by model id: the installed
+ * catalog's entries where pi-ai ships the route, else the bundled ones.
  * @param provider - provider route key.
- * @returns catalog models by id; empty for a route {@link catalogProvider} does not return.
+ * @returns described models by id; empty for a route nothing describes.
  */
 export function catalogModels(provider: string): Map<string, Model<Api>> {
+  const bundle = bundledProvider(provider)
+  if (bundle !== undefined) {
+    return new Map(bundle.models.map(entry => [entry.id, bundledModel(provider, bundle, entry)]))
+  }
   if (!catalogProviders().has(provider)) return new Map()
   const models = getBuiltinModels(provider as BuiltinProvider) as Model<Api>[]
   return new Map(models.map(model => [model.id, model]))
@@ -636,6 +652,13 @@ export interface PiAiModelProfile {
   reasoningEfforts?: false | PiAiReasoningEfforts
   /** pi-ai wire-compatibility switches for this model, winning over the route's per field; one its protocol does not declare is refused. */
   compat?: PiAiCompatProfile
+  /**
+   * Peak windows served by another provider resolved from the installed
+   * pi-ai catalog. The route keeps its own provider, endpoint, and display
+   * name; only the request's wire endpoint follows the active window. An
+   * empty list is the same as omitting the field.
+   */
+  peak?: PiAiPeakWindow[]
 }
 
 /**
@@ -843,6 +866,54 @@ export interface RouteCatalog {
    * picked, so only an explicit configuration lands here.
    */
   configuredMaxTokens: ReadonlyMap<string, number>
+  /** Validated peak windows by model id; empty when no entry declares one. */
+  peak: ReadonlyMap<string, readonly PiAiPeakWindow[]>
+}
+
+/**
+ * Validate one model's peak windows. Candidates resolve from the installed
+ * pi-ai catalog, so a window naming a bundled or hand-declared route is refused
+ * rather than left looking applied.
+ * @param provider - route key, for diagnostics.
+ * @param modelId - the model the windows serve.
+ * @param windows - configured windows, evaluated in order.
+ * @throws PiAiCatalogError naming the route, model, and offending field.
+ */
+function assertPeakWindows(
+  provider: string,
+  modelId: string,
+  windows: readonly PiAiPeakWindow[],
+): void {
+  for (const window of windows) {
+    if (!CLOCK_TIME.test(window.from)) {
+      invalid(provider, `model "${modelId}" peak from "${window.from}" must be a 24-hour HH:mm time`)
+    }
+    if (!CLOCK_TIME.test(window.to)) {
+      invalid(provider, `model "${modelId}" peak to "${window.to}" must be a 24-hour HH:mm time`)
+    }
+    if (window.timeZone !== undefined) {
+      try {
+        new Intl.DateTimeFormat('en-US', { timeZone: window.timeZone })
+      } catch {
+        invalid(provider, `model "${modelId}" peak timeZone "${window.timeZone}" is not a known IANA zone`)
+      }
+    }
+    if (window.providers.length === 0) {
+      invalid(provider, `model "${modelId}" peak window ${window.from}-${window.to} names no providers`)
+    }
+    for (const candidate of window.providers) {
+      if (candidate.provider.length === 0) {
+        invalid(provider, `model "${modelId}" peak window ${window.from}-${window.to} has an empty provider`)
+      }
+      if (catalogProvider(candidate.provider) === undefined) {
+        invalid(provider, `model "${modelId}" peak provider "${candidate.provider}" is not an installed pi-ai`
+          + ' catalog provider; peak candidates resolve from the installed catalog')
+      }
+      if (!catalogModels(candidate.provider).has(modelId)) {
+        invalid(provider, `model "${modelId}" peak provider "${candidate.provider}" does not serve that model`)
+      }
+    }
+  }
 }
 
 /**
@@ -860,7 +931,7 @@ export function resolveRouteModels(
 ): RouteCatalog {
   const { provider } = request
   const defaults = catalogModels(provider)
-  const providerBaseUrl = catalogProvider(provider)?.baseUrl
+  const providerBaseUrl = catalogProvider(provider)?.baseUrl ?? bundledProvider(provider)?.baseURL
   // An absent `models` key and an empty one are the same request: the config
   // schema materializes `[]` for the absent case, and an empty catalog could
   // serve no request anyway, so both mean "serve the installed catalog".
@@ -908,11 +979,16 @@ export function resolveRouteModels(
   assertOfferedCompatFields(provider, 'route', request.compat)
   const seen = new Set<string>()
   const configuredMaxTokens = new Map<string, number>()
+  const peak = new Map<string, readonly PiAiPeakWindow[]>()
   const resolveEntry = (entry: PiAiModelProfile): Model<Api> => {
     assertOfferedCompatFields(provider, `model "${entry.id}"`, entry.compat)
     if (entry.id.length === 0) invalid(provider, 'has a model with an empty id')
     if (seen.has(entry.id)) invalid(provider, `lists model "${entry.id}" more than once`)
     seen.add(entry.id)
+    if (entry.peak !== undefined && entry.peak.length > 0) {
+      assertPeakWindows(provider, entry.id, entry.peak)
+      peak.set(entry.id, entry.peak)
+    }
     const base = defaults.get(entry.id)
     const api = request.api ?? base?.api ?? routeApi
     if (api === undefined) {
@@ -982,5 +1058,11 @@ export function resolveRouteModels(
     invalid(provider, `sets compat "${field}", but no model on the route speaks a protocol that takes it;`
       + ` it exists on ${takers.join(', ')}`)
   }
-  return { models: serviceableModels, configuredMaxTokens, modelErrors }
+  const serviceableIds = new Set(serviceableModels.map(model => model.id))
+  return {
+    models: serviceableModels,
+    configuredMaxTokens,
+    modelErrors,
+    peak: new Map([...peak].filter(([id]) => serviceableIds.has(id))),
+  }
 }
