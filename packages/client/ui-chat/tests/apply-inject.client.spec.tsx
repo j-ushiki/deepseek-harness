@@ -256,7 +256,7 @@ describe('Chat inject API', () => {
   })
 
   it('applies restored and live link destinations without remounting the Chat view', async () => {
-    const settings: ChatSettings = { transcriptView: 'compact', performanceUsage: 'detailed', linkOpening: 'new-tab' }
+    const settings: ChatSettings = { transcriptView: 'compact', performanceUsage: 'detailed', linkOpening: 'new-tab', clockTimeZone: 'local' }
     const b = await bench(settings)
     const open = vi.spyOn(window, 'open').mockImplementation(() => null)
     try {

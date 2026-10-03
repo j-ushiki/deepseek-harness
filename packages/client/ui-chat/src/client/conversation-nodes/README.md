@@ -130,6 +130,12 @@ Work details uses the Host setting `ui-chat.transcriptView`. The client reads it
 
 Reading a default does not automatically save configuration. When the user changes modes, the selected value is saved through Host settings; memory mode does not write to disk. Desktop onboarding writes preferences according to its rules when completed or skipped.
 
+### Message clocks
+
+Every message timestamp renders as one caption line beneath the message it dates: the user and steering bubble, the completed-turn footer, and a Turn-trigger notice. The line always spells out the displayed zone's full `YYYY-MM-DDTHH:mm:ss`, and a pinned zone names itself in parentheses (`2026-01-01T10:10:10 (JST)`). The text is a pure function of the recorded event time, so it subscribes to no clock and needs no re-render when a date boundary passes.
+
+The displayed zone is the Host setting `ui-chat.clockTimeZone`: `local` (the device zone, the default), `jst`, or `utc`. A pinned zone appends its `JST` or `UTC` label; the device zone appends none. Every field is read in the displayed zone, so a pinned clock never borrows the device's calendar. JST and UTC are fixed offsets without daylight saving; `local` reads the runtime calendar because its offset moves.
+
 ### Group-title rules
 
 A closed group's header names the first three categories from its ranked summary, without displaying counts. A group without categories uses the thinking label. A running header names its live tool category, otherwise thinking; Standard appends live detail. Live titles remain visible for at least 150ms, retaining only the newest pending title.

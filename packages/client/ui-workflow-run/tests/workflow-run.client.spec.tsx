@@ -337,6 +337,7 @@ function panelProps(data: WorkflowRunChatData, sessions = listState(), openSessi
     useWorkspaces: selector => selector(panelWorkspace),
     useTurnData: () => undefined,
     useDisclosure: () => { throw new Error('unused') },
+    clockTimeZone: 'local',
     openSkill: vi.fn(),
     openFile: () => {},
     inspectCall: () => {},

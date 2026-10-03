@@ -11,7 +11,7 @@ import type {
   ChatViewSlotProps, CommandNode, CompactionSummaryNode, ContextMessageNode, ConversationNode,
   LegacyConversationSlice, ModelRetryNode, StartedToolCall, SteeringMessageNode,
   ToolCallBlock, ToolResultNode, TurnErrorNode, TurnMaxTokensNode, UseChatNodeTurnData,
-  TranscriptViewMode, UserMessageNode,
+  ClockTimeZone, TranscriptViewMode, UserMessageNode,
 } from '@deepseek-ai/dsh-client-ui-chat/client'
 import type {
   SessionListState, SessionSnapshot,
@@ -310,6 +310,7 @@ function makeHarness(
   const chat = createChatStore().create()
   const transcriptView = createSnapshotStore<TranscriptViewMode>('compact')
   const performanceUsage = createSnapshotStore<'compact' | 'detailed'>('detailed')
+  const clockTimeZone = createSnapshotStore<ClockTimeZone>('local')
   const t = makeTranslate(zh, commonZh)
   const toolOwners: Array<{
     callId: string
@@ -442,6 +443,7 @@ function makeHarness(
     useStore: bindSnapshotSelector(chat),
     actions: chat.actions,
     usePresentation: bindSnapshotSelector(derivePresentationPolicy(transcriptView)),
+    useClockTimeZone: bindSnapshotSelector(clockTimeZone),
     renderSlot,
     SessionProvider: SessionProviderStub,
     inspectCall: (callId: string) => { openView('trajectory', callId) },
@@ -489,6 +491,7 @@ function makeHarness(
       conversation.set({ ...conversation.getSnapshot() })
     },
     setTranscriptView: (mode: TranscriptViewMode) => { transcriptView.set(mode) },
+    setClockTimeZone: (zone: ClockTimeZone) => { clockTimeZone.set(zone) },
     setNodeRenderer: (renderer: React.ComponentProps<typeof ChatNodeSeat>['renderSlot']) => {
       nodeSlotOverride = renderer
     },

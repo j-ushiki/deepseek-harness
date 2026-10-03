@@ -76,7 +76,7 @@ const ChatNodeList = memo(function ChatNodeList({ entries, useChatGroup, pending
     }
   })
   const pendingRows = pendingInputs.map(item => 'requestId' in item ? (
-    <PendingSubmissionBubble key={item.requestId} submission={item}
+    <PendingSubmissionBubble key={item.requestId} submission={item} clockTimeZone={seatProps.clockTimeZone}
       renderMessageImages={seatProps.renderMessageImages} t={seatProps.t} />
   ) : (
     <PendingSteeringBubble key={item.id} content={item.content}
@@ -101,9 +101,10 @@ const ChatNodeList = memo(function ChatNodeList({ entries, useChatGroup, pending
 export function ChatView({
   useSession, useChat, useChatNode, useChatNodeProcess, useChatGroup, useConversation, useSessions, useStore, actions, renderSlot,
   sessionId, openFile, openSkill, openExternalLink, loadOlder, loadThrough, loadImage, inspectCall, chatScroll, forkAt, fileMentions,
-  usePresentation, useProjection, t,
+  usePresentation, useClockTimeZone, useProjection, t,
 }: ChatViewSlotProps) {
   const order = useChat(s => s.order)
+  const clockTimeZone = useClockTimeZone(zone => zone)
   const groupedEntries = useConversation(snapshot => snapshot.views.grouped('chat')?.entries)
   const entries = useMemo<readonly RenderEntry[]>(() => groupedEntries
     ?? order.map(key => ({ kind: 'node', key: key as NodeKey })), [groupedEntries, order])
@@ -266,6 +267,7 @@ export function ChatView({
                 useStore={useStore}
                 actions={actions}
                 cwd={cwd}
+                clockTimeZone={clockTimeZone}
                 openFile={requestOpenFile}
                 openSkill={openSkill}
                 inspectCall={inspectCall}

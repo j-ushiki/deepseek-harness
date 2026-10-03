@@ -18,13 +18,18 @@
   - text: 字号大小 仅影响会话内容的字号 14
   - button "增大字号"
   - button "减小字号"
-  - text: px 工作步骤展示 选择希望看到多少工具调用细节
+  - text: px 字体 同时应用于界面文字和代码，留空则使用浏览器默认字体
+  - textbox "字体":
+    - /placeholder: 例如 "Hiragino Sans", "Noto Sans JP"
+  - text: 工作步骤展示 选择希望看到多少工具调用细节
   - button "详细"
   - text: 显示代码工作视图 开启后，显示轨迹、本轮代码差异，可选择完整的 Agent 预设切换
   - switch "显示代码工作视图"
   - text: 快捷键
   - paragraph: 查看和编辑当前可用的快捷键和输入操作
   - button "编辑快捷键"
+  - text: 时间戳时区 消息时间戳使用的时区
+  - button "设备时区"
   - text: 繁忙时的发送行为 智能体运行时 Enter 键和发送按钮的行为；Cmd/Ctrl+Enter 使用另一行为
   - button "排队发送"
   - text: 性能与用量 选择性能与用量信息展示的详细程度
