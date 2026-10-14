@@ -31,7 +31,7 @@ Mount this package as a Loader entry in a profile that serves browser configurat
 
 `settings.openSettingsDocument()` prepares the provider-owned document and opens it with the native text editor; it accepts no browser-supplied filesystem target.
 
-`authorization.list()` describes registered sign-in flows. `authorization.begin(key, method, signal)` streams notices and questions, then a successful or cancelled outcome; failures reject with `authorization/failed`. `authorization.answer(promptId, value)` answers or declines a pending question and returns false for a stale id. Closing the stream cancels its attempt and releases pending questions before completion. The flow writes its grant through the credential service; this namespace never returns the stored grant.
+`authorization.list()` describes registered sign-in flows. `authorization.begin(key, method, signal)` streams notices and questions, then a successful or cancelled outcome; failures reject with `authorization/failed` and a safe diagnostic that omits raw provider responses and tokens. `authorization.answer(promptId, value)` answers or declines a pending question and returns false for a stale id. Closing the stream cancels its attempt and releases pending questions before completion. The flow writes its grant through the credential service; this namespace never returns the stored grant.
 
 -----
 

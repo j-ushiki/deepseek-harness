@@ -345,7 +345,7 @@ describe('draft-provider model discovery', () => {
   })
 
   it('reports a reply that is not a model listing', async () => {
-    const server = await listingServer({ body: '{"models":[]}' })
+    const server = await listingServer({ body: '{"models":"invalid"}' })
     const ctx = await harness()
 
     await expect(ctx.llm.discoverModels('llm-pi-ai', { baseURL: server.url }))

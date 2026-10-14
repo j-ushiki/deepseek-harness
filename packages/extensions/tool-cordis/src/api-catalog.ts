@@ -606,7 +606,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
       },
       {
         signature: '@Remote({ mode: \'stream\' }) async *begin(key: string, method: string | undefined, signal: AbortSignal): AsyncIterable<AuthorizationEvent>',
-        description: 'Run one attempt and stream what it says to the human. The stream ends with `settled`; a failed attempt ends it with an `authorization/failed` error.',
+        description: 'Run one attempt and stream what it says to the human. The stream ends with `settled`; a failed attempt ends it with a redacted `authorization/failed` error. Raw provider diagnostics remain only on the internal cause chain.',
         parameters: [{ name: 'key', description: 'the credential record to authorize, as `<scope>/<id>`.' }, { name: 'method', description: 'the flow\'s method to run; `undefined` runs its first.' }, { name: 'signal', description: 'stream lifetime; closing the stream withdraws the attempt.' }],
         returns: 'notices, questions, and finally the outcome.',
         throws: ['RemoteError when the key is malformed or the attempt fails.'],

@@ -62,10 +62,9 @@ async function attempt(
   request: { key?: CredentialKey; method?: string } = {},
 ): Promise<ReturnType<typeof surface>> {
   const ui = surface()
-  login.mockImplementation(async (providerId: string, _type: AuthType, interaction: AuthInteraction) => {
+  login.mockImplementation(async (_providerId: string, _type: AuthType, interaction: AuthInteraction) => {
     await converse(interaction)
     const granted: Credential = { type: 'oauth', access: 'at', refresh: 'rt', expires: 1 }
-    await credentialStoreFrom(ctx).modify(providerId, () => Promise.resolve(granted))
     return granted
   })
   await expect(ctx.authorization.begin({
@@ -98,20 +97,20 @@ describe('pi-ai login flows', () => {
     expect(offered.find(entry => entry.key === recordKeyFor('deepseek'))?.methods.map(one => one.id))
       .toEqual(['api-key'])
     // pi-ai ships Sign in with ChatGPT for `openai`, which needs an
-    // installation ID the harness does not supply; only the key login is offered.
+    // installation ID is prepared only when this subscription method starts.
     expect(catalogProvider('openai')?.auth.oauth?.loginLabel).toBe('Sign in with ChatGPT')
     expect(offered.find(entry => entry.key === recordKeyFor('openai'))?.methods.map(one => one.id))
-      .toEqual(['api-key'])
+      .toEqual(['oauth', 'api-key'])
   })
 
   it('runs the pi-ai auth type the chosen method names', async () => {
     const ctx = await harness()
 
     await attempt(ctx, () => Promise.resolve())
-    expect(login).toHaveBeenLastCalledWith('openai-codex', 'oauth', expect.anything())
+    expect(login).toHaveBeenLastCalledWith('openai-codex', 'oauth', expect.anything(), undefined)
 
     await attempt(ctx, () => Promise.resolve(), { key: recordKeyFor('anthropic'), method: 'api-key' })
-    expect(login).toHaveBeenLastCalledWith('anthropic', 'api_key', expect.anything())
+    expect(login).toHaveBeenLastCalledWith('anthropic', 'api_key', expect.anything(), undefined)
   })
 
   it('commits what the login produced, where the adapter reads it back', async () => {

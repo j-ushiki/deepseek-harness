@@ -31,7 +31,7 @@ kind: "package-reference"
 
 `settings.openSettingsDocument()` 准备提供方持有的文档，并用原生文本编辑器打开；该方法不接受浏览器提供的文件系统目标。
 
-`authorization.list()` 描述已注册的登录流程。`authorization.begin(key, method, signal)` 以流传送通知与问题，最后返回成功或取消的结果；失败以 `authorization/failed` 拒绝。`authorization.answer(promptId, value)` 回答或拒绝待处理的问题，对过期 id 返回 false。关闭流会取消该次尝试，并在完成前释放待处理的问题。流程通过凭据服务写入授权记录；此 namespace 不会返回已存储的授权记录。
+`authorization.list()` 描述已注册的登录流程。`authorization.begin(key, method, signal)` 以流传送通知与问题，最后返回成功或取消的结果；失败以 `authorization/failed` 和不含原始提供方响应及 token 的安全诊断拒绝。`authorization.answer(promptId, value)` 回答或拒绝待处理的问题，对过期 id 返回 false。关闭流会取消该次尝试，并在完成前释放待处理的问题。流程通过凭据服务写入授权记录；此 namespace 不会返回已存储的授权记录。
 
 -----
 

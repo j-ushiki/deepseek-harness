@@ -53,7 +53,8 @@ export class AuthorizationController extends TypertRemoteService {
 
   /**
    * Run one attempt and stream what it says to the human. The stream ends with
-   * `settled`; a failed attempt ends it with an `authorization/failed` error.
+   * `settled`; a failed attempt ends it with a redacted `authorization/failed`
+   * error. Raw provider diagnostics remain only on the internal cause chain.
    * @param key - the credential record to authorize, as `<scope>/<id>`.
    * @param method - the flow's method to run; `undefined` runs its first.
    * @param signal - stream lifetime; closing the stream withdraws the attempt.
@@ -127,7 +128,10 @@ export class AuthorizationController extends TypertRemoteService {
       if (failure !== undefined) {
         throw new RemoteError(
           'authorization/failed',
-          failure.error instanceof Error ? failure.error.message : String(failure.error),
+          failure.error instanceof AuthorizationError
+            && ['NO_FLOW', 'UNKNOWN_METHOD', 'ALREADY_IN_FLIGHT'].includes(failure.error.code)
+            ? failure.error.message
+            : 'Sign-in failed. Try again or check the Host configuration.',
           { key },
           { cause: failure.error },
         )
