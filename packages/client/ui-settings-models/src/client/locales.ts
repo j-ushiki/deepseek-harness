@@ -147,6 +147,13 @@ export const en = {
   onboardingLater: 'Configure later',
   onboardingSave: 'Save and continue',
   onboardingSaving: 'Saving…',
+  signIn: 'Sign in',
+  signInHint: 'Sign in with your account instead of an API key.',
+  signInCancel: 'Cancel sign-in',
+  signInSubmit: 'Submit',
+  signInDone: 'Signed in.',
+  signInCancelled: 'Sign-in was cancelled.',
+  signInFailed: 'Sign-in failed',
   keyRequired: 'Enter an API key to continue.',
 }
 
@@ -300,6 +307,13 @@ export const zh: { [Key in keyof typeof en]: string } = {
   onboardingLater: '稍后配置',
   onboardingSave: '保存并继续',
   onboardingSaving: '保存中…',
+  signIn: '登录',
+  signInHint: '使用账号登录，而不是填写 API 密钥。',
+  signInCancel: '取消登录',
+  signInSubmit: '提交',
+  signInDone: '已登录。',
+  signInCancelled: '已取消登录。',
+  signInFailed: '登录失败',
   keyRequired: '请输入 API 密钥后继续。',
 }
 
@@ -451,6 +465,13 @@ export const ja = {
   'onboardingSave': '保存して続ける',
   'onboardingSaving': '保存中…',
   'keyRequired': '続けるにはAPIキーを入力してください。',
+  'signIn': 'サインイン',
+  'signInHint': 'API キーの代わりに、アカウントでサインインします。',
+  'signInCancel': 'サインインを中止',
+  'signInSubmit': '送信',
+  'signInDone': 'サインインしました。',
+  'signInCancelled': 'サインインを中止しました。',
+  'signInFailed': 'サインインに失敗しました',
 } satisfies Record<keyof typeof en, string>
 
 /** Spanish dictionary, checked against the English keys. */
@@ -601,6 +622,13 @@ export const es = {
   onboardingSave: 'Guardar y continuar',
   onboardingSaving: 'Guardando…',
   keyRequired: 'Ingrese una clave API para continuar.',
+  signIn: 'Iniciar sesión',
+  signInHint: 'Inicie sesión con su cuenta en lugar de una clave API.',
+  signInCancel: 'Cancelar inicio de sesión',
+  signInSubmit: 'Enviar',
+  signInDone: 'Sesión iniciada.',
+  signInCancelled: 'Se canceló el inicio de sesión.',
+  signInFailed: 'Error al iniciar sesión',
 } satisfies Record<keyof typeof en, string>
 
 /** French dictionary, checked against the English keys. */
@@ -751,6 +779,13 @@ export const fr = {
   onboardingSave: 'Enregistrer et continuer',
   onboardingSaving: 'Sauvegarde…',
   keyRequired: 'Entrez une clé API pour continuer.',
+  signIn: 'Se connecter',
+  signInHint: 'Connectez-vous avec votre compte au lieu d’une clé API.',
+  signInCancel: 'Annuler la connexion',
+  signInSubmit: 'Envoyer',
+  signInDone: 'Connecté.',
+  signInCancelled: 'La connexion a été annulée.',
+  signInFailed: 'Échec de la connexion',
 } satisfies Record<keyof typeof en, string>
 
 /** German dictionary, checked against the English keys. */
@@ -901,6 +936,13 @@ export const de = {
   onboardingSave: 'Speichern und fortfahren',
   onboardingSaving: 'Speichern…',
   keyRequired: 'Geben Sie einen API-Schlüssel ein, um fortzufahren.',
+  signIn: 'Anmelden',
+  signInHint: 'Melden Sie sich mit Ihrem Konto an, statt einen API-Schlüssel zu verwenden.',
+  signInCancel: 'Anmeldung abbrechen',
+  signInSubmit: 'Senden',
+  signInDone: 'Angemeldet.',
+  signInCancelled: 'Die Anmeldung wurde abgebrochen.',
+  signInFailed: 'Anmeldung fehlgeschlagen',
 } satisfies Record<keyof typeof en, string>
 
 /** Russian dictionary, checked against the English keys. */
@@ -1051,6 +1093,13 @@ export const ru = {
   onboardingSave: 'Сохранить и продолжить',
   onboardingSaving: 'Сохранение…',
   keyRequired: 'Введите ключ API, чтобы продолжить.',
+  signIn: 'Войти',
+  signInHint: 'Войдите через свой аккаунт вместо ключа API.',
+  signInCancel: 'Отменить вход',
+  signInSubmit: 'Отправить',
+  signInDone: 'Вход выполнен.',
+  signInCancelled: 'Вход отменён.',
+  signInFailed: 'Не удалось войти',
 } satisfies Record<keyof typeof en, string>
 
 /** Portuguese dictionary, checked against the English keys. */
@@ -1201,4 +1250,11 @@ export const pt = {
   onboardingSave: 'Salvar e continuar',
   onboardingSaving: 'Salvando…',
   keyRequired: 'Insira uma chave de API para continuar.',
+  signIn: 'Entrar',
+  signInHint: 'Entre com a sua conta em vez de uma chave de API.',
+  signInCancel: 'Cancelar entrada',
+  signInSubmit: 'Enviar',
+  signInDone: 'Sessão iniciada.',
+  signInCancelled: 'A entrada foi cancelada.',
+  signInFailed: 'Falha ao entrar',
 } satisfies Record<keyof typeof en, string>

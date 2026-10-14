@@ -14,6 +14,10 @@ A form namespace is the local id of a uniquely addressed entry in the active pro
 
 `settings/document-updated` invalidates form descriptors after Loader configuration changes. It is a UI notification; consumers use `loader/volatile-update` only when they need to refresh registration facts.
 
+## Sign-in messages
+
+`AuthorizationEvent` carries a notice, a question, a withdrawn-question id, or a terminal authorization status. `AuthorizationPromptView` contains a branded `AuthorizationPromptId`, message, and either a text/secret input with an optional placeholder or a select input with options. These types are declared by the [configuration controller](../../packages/api/settings-controller/README.md); its stream never returns the stored credential grant.
+
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
 <a id="cordis-surface"></a>
@@ -21,6 +25,44 @@ A form namespace is the local id of a uniquely addressed entry in the active pro
 ## Cordis API
 
 Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
+
+<a id="ctxauthorizationcontroller--authorizationcontroller"></a>
+
+### `ctx.authorizationController` — `AuthorizationController`
+
+Host service backing the generated `ctx.remote.authorization` namespace. An attempt lives exactly as long as its `begin` stream: the page ends it by closing the stream, and notices and questions travel back on that stream.
+
+```ts cordis-catalog
+/**
+ * List every registered flow.
+ * @returns each flow's key, label, methods, and whether an attempt is running.
+ * @throws RemoteError when no authorization service is mounted.
+ */
+@Remote list(): readonly AuthorizationEntry[]
+
+/**
+ * Run one attempt and stream what it says to the human. The stream ends with
+ * `settled`; a failed attempt ends it with an `authorization/failed` error.
+ * @param key - the credential record to authorize, as `<scope>/<id>`.
+ * @param method - the flow's method to run; `undefined` runs its first.
+ * @param signal - stream lifetime; closing the stream withdraws the attempt.
+ * @returns notices, questions, and finally the outcome.
+ * @throws RemoteError when the key is malformed or the attempt fails.
+ */
+@Remote({ mode: 'stream' }) async *begin(key: string, method: string | undefined, signal: AbortSignal): AsyncIterable<AuthorizationEvent>
+
+/**
+ * Answer one question a running attempt asked.
+ * @param promptId - the `promptId` of a `prompt` event.
+ * @param value - the typed text or chosen option id; `null` declines.
+ * @returns whether the question was still waiting.
+ */
+@Remote answer(promptId: AuthorizationPromptId, value: string | null): boolean
+```
+
+Types: [AuthorizationEntry](credentials.md)
+
+Source: [`packages/api/settings-controller/src/authorization.ts`](../../packages/api/settings-controller/src/authorization.ts)
 
 <a id="ctxsettings--settingsforms"></a>
 
