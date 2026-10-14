@@ -16,7 +16,7 @@ const FLOW: AuthorizationEntry = {
 
 function operations(overrides: Partial<ModelsOperations>): ModelsOperations {
   return {
-    describeCredential: vi.fn(), storeCredential: vi.fn(), removeCredential: vi.fn(),
+    storeCredential: vi.fn(), removeCredential: vi.fn(),
     writeSettings: vi.fn(), discoverModels: vi.fn(),
     describeSignIn: () => Promise.resolve(FLOW), signIn: vi.fn(), answerSignIn: vi.fn(), ...overrides,
   }
