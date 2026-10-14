@@ -47,6 +47,10 @@ The primary field on an editor card is a single **API key** input — the page n
 
 The editor uses redacted `CredentialInfo` to choose the saved-credential placeholder or environment detection, without displaying a credential-source label. Refreshing the snapshot updates an open editor without a separate probe. The hint never receives a credential value or changes field writability.
 
+### Account sign-in
+
+A pi-ai provider with a registered authorization flow offers **Sign in** in its editor, including ChatGPT through `openai-codex`. The card displays the flow's link or device code and accepts text, secret, or selection answers inline. Secret answers use password inputs. **Cancel sign-in** or closing the editor withdraws the attempt; success stores the grant on the Host without returning it to the page. A failed attempt displays the Host diagnostic and can be retried. Providers without a flow keep their API-key editor.
+
 ### Editing a provider
 
 A blank key field offers a saved credential when one is detected, with no status text below the input; otherwise it offers environment authentication. Redacted `credentials.describe` checks distinguish a detected environment reference, no detected variables, and an unconfirmed read. A missing-variable hint uses the warning color and names the first variable to configure. A detected environment reference uses green. Address configuration variables do not count as credentials. Hidden authentication references still participate in detection; a generic detected hint keeps their names hidden. Detection does not validate credentials, test a connection, or inspect provider-managed files such as AWS profiles and Google application-default credentials. A nonempty input shows no authentication status text. The page reads native variable names as well as named references, in batches of at most 64, and never reads their values into the Client.

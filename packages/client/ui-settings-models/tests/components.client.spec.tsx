@@ -214,6 +214,7 @@ function scriptedFace(overrides: {
       update,
       mutate,
     },
+    authorization: { list: vi.fn(() => Promise.resolve({ ok: true, value: [] })) },
     credentials: {
       // Typed as the Remote answer rather than the success branch alone: a
       // case that scripts a refusal replaces this mock.
