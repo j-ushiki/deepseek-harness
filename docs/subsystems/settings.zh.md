@@ -14,6 +14,10 @@
 
 `settings/document-updated` 在 Loader 配置变化后使表单描述符失效。这是 UI 通知；消费者仅在需要刷新注册信息时使用 `loader/volatile-update`。
 
+## 登录消息
+
+`AuthorizationEvent` 携带通知、问题、已撤回问题的 id 或最终授权状态。`AuthorizationPromptView` 包含带品牌的 `AuthorizationPromptId`、消息，以及带可选占位符的文本／机密输入或带选项的选择输入。这些类型由[配置控制器](../../packages/api/settings-controller/README.zh.md) 声明；其流不会返回已存储的凭据授权记录。
+
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
 <a id="cordis-surface"></a>
@@ -21,6 +25,44 @@
 ## Cordis API
 
 Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.zh.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
+
+<a id="ctxauthorizationcontroller--authorizationcontroller"></a>
+
+### `ctx.authorizationController` — `AuthorizationController`
+
+Host service backing the generated `ctx.remote.authorization` namespace. An attempt lives exactly as long as its `begin` stream: the page ends it by closing the stream, and notices and questions travel back on that stream.
+
+```ts cordis-catalog
+/**
+ * List every registered flow.
+ * @returns each flow's key, label, methods, and whether an attempt is running.
+ * @throws RemoteError when no authorization service is mounted.
+ */
+@Remote list(): readonly AuthorizationEntry[]
+
+/**
+ * Run one attempt and stream what it says to the human. The stream ends with
+ * `settled`; a failed attempt ends it with an `authorization/failed` error.
+ * @param key - the credential record to authorize, as `<scope>/<id>`.
+ * @param method - the flow's method to run; `undefined` runs its first.
+ * @param signal - stream lifetime; closing the stream withdraws the attempt.
+ * @returns notices, questions, and finally the outcome.
+ * @throws RemoteError when the key is malformed or the attempt fails.
+ */
+@Remote({ mode: 'stream' }) async *begin(key: string, method: string | undefined, signal: AbortSignal): AsyncIterable<AuthorizationEvent>
+
+/**
+ * Answer one question a running attempt asked.
+ * @param promptId - the `promptId` of a `prompt` event.
+ * @param value - the typed text or chosen option id; `null` declines.
+ * @returns whether the question was still waiting.
+ */
+@Remote answer(promptId: AuthorizationPromptId, value: string | null): boolean
+```
+
+Types: [AuthorizationEntry](credentials.zh.md)
+
+Source: [`packages/api/settings-controller/src/authorization.ts`](../../packages/api/settings-controller/src/authorization.ts)
 
 <a id="ctxsettings--settingsforms"></a>
 
