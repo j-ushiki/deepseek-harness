@@ -7,6 +7,7 @@
 
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {
+  AuthorizationEntry, AuthorizationEvent, AuthorizationPromptId,
   CredentialInfo, LlmDiscoveredModel, LlmModelDiscoveryRequest,
   SettingsNamespaceView, SettingsPathOpView,
 } from '@deepseek-ai/dsh-api-remotes/client'
@@ -29,6 +30,16 @@ export type ModelDiscoveryOutcome =
   | { readonly kind: 'found'; readonly models: readonly LlmDiscoveredModel[] }
   /** The interrogation was refused, with the Host's own diagnostic. */
   | { readonly kind: 'refused'; readonly message: string }
+
+/** How one sign-in attempt ended. */
+export type SignInOutcome =
+  | { readonly kind: 'authorized' }
+  | { readonly kind: 'cancelled' }
+  /** The attempt failed, with the Host's own diagnostic. */
+  | { readonly kind: 'failed'; readonly message: string }
+
+/** Progress shown before the operation returns its terminal outcome. */
+export type SignInProgressEvent = Exclude<AuthorizationEvent, { readonly type: 'settled' }>
 
 /** The Host operations the Models page and its cards invoke. */
 export interface ModelsOperations {
@@ -71,12 +82,32 @@ export interface ModelsOperations {
    * @returns the candidates, or the refusal.
    */
   discoverModels(settingsNs: string, request: LlmModelDiscoveryRequest): Promise<ModelDiscoveryOutcome>
+  /**
+   * Find the sign-in flow registered for one credential record.
+   * @param key - credential record key, `<scope>/<id>`.
+   * @returns the flow, or undefined when none is registered or the read was refused.
+   */
+  describeSignIn(key: string): Promise<AuthorizationEntry | undefined>
+  /**
+   * Run one sign-in attempt until it settles.
+   * @param key - credential record key, `<scope>/<id>`.
+   * @param onEvent - receives each notice and question the flow raises.
+   * @param signal - withdraws the attempt.
+   * @returns how the attempt ended.
+   */
+  signIn(key: string, onEvent: (event: SignInProgressEvent) => void, signal: AbortSignal): Promise<SignInOutcome>
+  /**
+   * Answer one question a running sign-in asked.
+   * @param promptId - the question's id.
+   * @param value - the answer, or null to decline.
+   */
+  answerSignIn(promptId: AuthorizationPromptId, value: string | null): Promise<void>
 }
 
 /**
  * Bind the page's Host operations to the plugin's own Remote namespaces.
  * @param ctx - the page plugin's context, which declares `remote.credentials`,
- * `remote.llm`, and `remote.settings` in its own `inject`.
+ * `remote.llm`, `remote.settings`, and `remote.authorization` in its own `inject`.
  * @returns the callbacks the section and its cards are injected with.
  */
 export function createModelsOperations(ctx: ClientContext): ModelsOperations {
@@ -104,6 +135,27 @@ export function createModelsOperations(ctx: ClientContext): ModelsOperations {
       return response.ok
         ? { kind: 'found', models: response.value }
         : { kind: 'refused', message: response.error.message }
+    },
+    describeSignIn: async (key) => {
+      const response = await ctx.remote.authorization.list()
+      return response.ok ? response.value.find(entry => entry.key === key) : undefined
+    },
+    signIn: async (key, onEvent, signal) => {
+      const stream = ctx.remote.authorization.begin(key, undefined, signal)
+      try {
+        for await (const event of stream) {
+          if (event.type === 'settled') return { kind: event.status }
+          onEvent(event)
+        }
+        return { kind: 'cancelled' }
+      } catch (error: unknown) {
+        return signal.aborted ? { kind: 'cancelled' } : { kind: 'failed', message: error instanceof Error ? error.message : String(error) }
+      } finally {
+        stream.dispose()
+      }
+    },
+    answerSignIn: async (promptId, value) => {
+      await ctx.remote.authorization.answer(promptId, value)
     },
   }
 }

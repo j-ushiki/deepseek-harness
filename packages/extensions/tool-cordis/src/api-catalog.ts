@@ -549,6 +549,33 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'authorizationController',
+    summary: 'Host service backing the generated `ctx.remote.authorization` namespace.',
+    description: 'Host service backing the generated `ctx.remote.authorization` namespace. An attempt lives exactly as long as its `begin` stream: the page ends it by closing the stream, and notices and questions travel back on that stream.',
+    methods: [
+      {
+        signature: '@Remote list(): readonly AuthorizationEntry[]',
+        description: 'List every registered flow.',
+        parameters: [],
+        returns: 'each flow\'s key, label, methods, and whether an attempt is running.',
+        throws: ['RemoteError when no authorization service is mounted.'],
+      },
+      {
+        signature: '@Remote({ mode: \'stream\' }) async *begin(key: string, method: string | undefined, signal: AbortSignal): AsyncIterable<AuthorizationEvent>',
+        description: 'Run one attempt and stream what it says to the human. The stream ends with `settled`; a failed attempt ends it with an `authorization/failed` error.',
+        parameters: [{ name: 'key', description: 'the credential record to authorize, as `<scope>/<id>`.' }, { name: 'method', description: 'the flow\'s method to run; `undefined` runs its first.' }, { name: 'signal', description: 'stream lifetime; closing the stream withdraws the attempt.' }],
+        returns: 'notices, questions, and finally the outcome.',
+        throws: ['RemoteError when the key is malformed or the attempt fails.'],
+      },
+      {
+        signature: '@Remote answer(promptId: AuthorizationPromptId, value: string | null): boolean',
+        description: 'Answer one question a running attempt asked.',
+        parameters: [{ name: 'promptId', description: 'the `promptId` of a `prompt` event.' }, { name: 'value', description: 'the typed text or chosen option id; `null` declines.' }],
+        returns: 'whether the question was still waiting.',
+      },
+    ],
+  },
+  {
     key: 'browserUse',
     summary: 'Owns one optional provider registration in the shared browser-use service.',
     description: 'Owns one optional provider registration in the shared browser-use service.',
@@ -4791,6 +4818,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface AuthorizationEntry {\n    key: CredentialKey;\n    label: string;\n    methods: readonly AuthorizationMethod[];\n    inFlight: boolean;\n}',
   },
   {
+    name: 'AuthorizationEvent',
+    declaration: 'export type AuthorizationEvent = {\n    readonly type: \'notice\';\n    readonly notice: AuthorizationNotice;\n} | {\n    readonly type: \'prompt\';\n    readonly prompt: AuthorizationPromptView;\n} | {\n    readonly type: \'prompt-withdrawn\';\n    readonly promptId: AuthorizationPromptId;\n} | {\n    readonly type: \'settled\';\n    readonly status: AuthorizationStatus;\n};',
+  },
+  {
     name: 'AuthorizationFlow',
     declaration: 'export interface AuthorizationFlow {\n    readonly key: CredentialKey;\n    readonly label: string;\n    readonly methods: readonly [\n        AuthorizationMethod,\n        ...AuthorizationMethod[]\n    ];\n    run(session: AuthorizationSession): Promise<void>;\n}',
   },
@@ -4815,8 +4846,16 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type AuthorizationPrompt = {\n    signal?: AbortSignal;\n} & ({\n    kind: \'text\';\n    message: string;\n    placeholder?: string;\n} | {\n    kind: \'secret\';\n    message: string;\n    placeholder?: string;\n} | {\n    kind: \'select\';\n    message: string;\n    options: readonly AuthorizationPromptOption[];\n});',
   },
   {
+    name: 'AuthorizationPromptId',
+    declaration: 'export type AuthorizationPromptId = Branded<\'authorization-prompt-id\'>;',
+  },
+  {
     name: 'AuthorizationPromptOption',
     declaration: 'export interface AuthorizationPromptOption {\n    id: string;\n    label: string;\n    description?: string;\n}',
+  },
+  {
+    name: 'AuthorizationPromptView',
+    declaration: 'export type AuthorizationPromptView = {\n    readonly promptId: AuthorizationPromptId;\n    readonly message: string;\n} & ({\n    readonly kind: \'text\' | \'secret\';\n    readonly placeholder?: string;\n} | {\n    readonly kind: \'select\';\n    readonly options: readonly AuthorizationPromptOption[];\n});',
   },
   {
     name: 'AuthorizationRequest',
@@ -5828,11 +5867,15 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'LlmModelInfo',
-    declaration: 'export interface LlmModelInfo {\n    provider: string;\n    id: string;\n    name: string;\n    description?: string;\n    inputModalities?: readonly ModelModality[];\n}',
+    declaration: 'export interface LlmModelInfo {\n    provider: string;\n    id: string;\n    name: string;\n    description?: string;\n    inputModalities?: readonly ModelModality[];\n    routing?: LlmModelRouting;\n}',
   },
   {
     name: 'LlmModelReasoningInfo',
     declaration: 'export interface LlmModelReasoningInfo {\n    efforts: readonly LlmReasoningEffortInfo[];\n    defaultEffort?: ReasoningEffortId;\n}',
+  },
+  {
+    name: 'LlmModelRouting',
+    declaration: 'export interface LlmModelRouting {\n    windows: readonly LlmRoutingWindow[];\n}',
   },
   {
     name: 'LlmProviderInfo',
@@ -5845,6 +5888,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'LlmResolvedModelInfo',
     declaration: 'export interface LlmResolvedModelInfo extends LlmModelInfo {\n    context?: LlmModelContext;\n    defaultMaxTokens?: number;\n    reasoning?: LlmModelReasoningInfo;\n    systemPromptUpdate?: SystemPromptUpdate;\n    toolUpdate?: ToolUpdate;\n}',
+  },
+  {
+    name: 'LlmRoutingWindow',
+    declaration: 'export interface LlmRoutingWindow {\n    from: string;\n    to: string;\n    timeZone?: string;\n    provider: string;\n}',
   },
   {
     name: 'LlmRuntime',
@@ -6028,7 +6075,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'ModelCatalogModel',
-    declaration: 'export interface ModelCatalogModel {\n    readonly id: string;\n    readonly name: string;\n    readonly description?: string;\n    readonly reasoning?: ModelReasoning;\n}',
+    declaration: 'export interface ModelCatalogModel {\n    readonly id: string;\n    readonly name: string;\n    readonly description?: string;\n    readonly reasoning?: ModelReasoning;\n    readonly routing?: LlmModelRouting;\n}',
   },
   {
     name: 'ModelMessageSource',
