@@ -98,7 +98,11 @@ pi-ai 的已安装目录是它所随附的每个提供方的权威答案，被�
 
 ### 登录提供方
 
-pi-ai 提供登录的提供方可以通过 harness 授权 seam 登录：流程提供 OAuth 或交互式密钥提示（密钥键入 pi-ai 自己的登录提示，而非设置表单），得到的凭据存储在 harness 凭据存储的 `llm-pi-ai/<provider id>` 记录中。存储的登录在其路由的 `apiKeyEnv` 覆盖之下完成认证，并在存储的跨进程锁下自行刷新；退出登录即删除存储记录。落在记录文法之外——小写连字符标识符——的手工声明路由键无法登录，因为对它的记录写入会以 `LlmError('UNSTORABLE_PROVIDER_ID')` 拒绝；这类路由改用 `apiKeyEnv` 或提供方 ambient 设置认证。
+pi-ai 提供登录的提供方可以通过 harness 授权 seam 登录：流程提供 OAuth 或交互式密钥提示（密钥键入 pi-ai 自己的登录提示，而非设置表单），得到的凭据存储在 harness 凭据存储的 `llm-pi-ai/<provider id>` 记录中。授权 seam 在登录完成后提交凭据；提交前取消会保留旧记录，已接受的写入则在尝试结束前完成。存储的登录在其路由的 `apiKeyEnv` 覆盖之下完成认证，并在存储的跨进程锁下自行刷新；退出登录即删除存储记录。落在记录文法之外——小写连字符标识符——的手工声明路由键无法登录，因为对它的记录写入会以 `LlmError('UNSTORABLE_PROVIDER_ID')` 拒绝；这类路由改用 `apiKeyEnv` 或提供方 ambient 设置认证。
+
+`openai` 路由提供 **Sign in with ChatGPT**，通过公开的 `https://api.openai.com/v1/responses` 端点使用 ChatGPT 套餐；即使 profile 覆盖 `baseURL`，订阅推论仍固定使用该端点。在模型设置中添加 `openai`，留空 API key 字段并选择登录。浏览器会请求使用 ChatGPT 套餐的权限；该流程不会启动 Codex Agent，也不会替换 Harness 的 Agent 循环。显式 API key 引用仍优先使用，并按 API 计费。`openai-codex` 路由保留独立的旧版凭据；迁移时需要重新登录 `openai`。
+
+安装实例 UUID 存放在 `<DSH_HOME>/.chatgpt-host-id`，与遥测身份分离；`chatgptHostIdPath` 可以选择其他文件。文件以仅所有者可访问的权限原子创建，共享该路径的进程使用同一身份。文件缺失会创建新主机身份；文件无效或不可读则拒绝登录。流程在保存前验证 ID token 的签名、签发者、已签发的客户端 ID、有效期、nonce 和账号。再次登录复用已签发的客户端和 ID token，并拒绝意外的账号变更；删除 `llm-pi-ai/openai` 记录后可重新注册。参见 OpenAI 的[注册指南](https://developers.openai.com/siwc/token-sharing-open-source/sign-in)。
 
 ### 解析模型目录
 
@@ -141,7 +145,7 @@ providers:
 
 ### 从端点发现模型
 
-插件会回答「该提供方可以提供哪些模型？」，供配置界面正在编辑或起草的路由使用。已安装目录提供的路由——或本构建内置的路由——直接由该目录回答，不发网络请求，并将其 `input` 数组保留为发现结果的 `inputModalities`；只有两者均未描述的路由才会经网络询问。`openai-completions` 与 `openai-responses` 使用带 bearer 鉴权的 `GET {baseURL}/models`，`anthropic-messages` 则以 `x-api-key` 和 `anthropic-version` 使用原生 `GET /v1/models?limit=1000` 语义；其列表 URL 接受带或不带末尾 `/v1` 的 API 根地址，因为网关文档两种写法都会发布，且只有该列表 URL 会归一化这一段，模型请求收到的仍是配置原样的 `baseURL`。已配置且具名的路由会在 Host 内部提供已存凭据与 profile `headers`，因此通过 `cordis.patch.yml` 或 Cordis 配置设置的部署标头可以到达模型发现请求，但不会成为发现请求或 Models 页面的字段；表单中新键入的密钥仍优先于已存凭据。解析器接受标准 `data` 数组或富信息 `models` 对象，并归一化每个候选的 id、显示名、上下文窗口与最大输出 token 数；Anthropic 的 `max_input_tokens` 与 `max_tokens` 会进入相同容量字段，即使对象条目点名了另一个规范 id，对象键仍是请求 id，原始类型的对象属性会被忽略，缺失的显示名则回退到该请求 id。回答是界面可以提供给用户采纳的候选元数据——不存储任何内容，`cordis.patch.yml` 仍然是决定路由服务内容的唯一事实。
+插件会回答「该提供方可以提供哪些模型？」，供配置界面正在编辑或起草的路由使用。已安装目录提供的路由——或本构建内置的路由——除 ChatGPT 套餐凭据外，直接由该目录回答，不发网络请求，并将其 `input` 数组保留为发现结果的 `inputModalities`；其他路由仅在两者均未描述时经网络询问。`openai-completions` 与 `openai-responses` 使用带 bearer 鉴权的 `GET {baseURL}/models`，`anthropic-messages` 则以 `x-api-key` 和 `anthropic-version` 使用原生 `GET /v1/models?limit=1000` 语义；其列表 URL 接受带或不带末尾 `/v1` 的 API 根地址，因为网关文档两种写法都会发布，且只有该列表 URL 会归一化这一段，模型请求收到的仍是配置原样的 `baseURL`。已配置且具名的路由会在 Host 内部提供已存凭据与 profile `headers`，因此通过 `cordis.patch.yml` 或 Cordis 配置设置的部署标头可以到达模型发现请求，但不会成为发现请求或 Models 页面的字段；表单中新键入的密钥仍优先于已存凭据。解析器接受标准 `data` 数组、ChatGPT 的可见 `models` 数组或富信息 `models` 对象，并归一化每个候选的 id、显示名、上下文窗口与最大输出 token 数；Anthropic 的 `max_input_tokens` 与 `max_tokens` 会进入相同容量字段，即使对象条目点名了另一个规范 id，对象键仍是请求 id，原始类型的对象属性会被忽略，缺失的显示名则回退到该请求 id。回答是界面可以提供给用户采纳的候选元数据——不存储任何内容，`cordis.patch.yml` 仍然是决定路由服务内容的唯一事实。 `openai` 上存储的 ChatGPT 套餐凭据会改为读取该账号的公开模型列表，保留可见模型的 slug 与服务器顺序，并补充已知模型的目录容量。套餐发现拒绝自定义端点；API key 覆盖仍使用普通目录路径。
 
 ### 失败与恢复
 
@@ -274,7 +278,7 @@ pi-ai 事件变成 harness 的推理、文本、工具调用、用量与 finish 
 - **内置条目的输出上限取决于其来源**——存在供应商文档化上限时使用该值（GLM 5.3 与 GLM 5.3 Flash 为 131,072）；否则条目携带 Ollama 端点接受的最大 `max_tokens`，那是上界而非模型自身的真实上限。此处每个值都会被端点接受，因此未核实来源的条目是夸大了能力，而不是让请求失败。
 - **`maxRequestImageBytes` 只计算 base64 图片载荷**，文本、工具、描述符与 JSON 结构在该上限之外，因此它必须留有余量地低于网关请求体上限。
 - **登录只存在于发起它的进程中**——授权尝试不持久，因此登录中途刷新页面会放弃它，用户需要重新开始。退出登录是对已存储记录执行 `deleteRecord`，只在本地忘记它，不会告知签发方。
-- **OpenAI 不提供 ChatGPT 登录**——pi-ai 的 Sign in with ChatGPT 用应用提供的稳定 UUID 向 OpenAI 标识安装实例，而 harness 没有用于第三方账号登录的安装 ID；`openai` 路由改用 API key 登录。
+- **ChatGPT 登录需要浏览器回调或粘贴重定向 URL**——Host 监听操作系统分配的 loopback 端口；远程 Host 需要隧道或手动回调。OAuth 凭据需要套餐使用权限，并受账号使用限额约束。
 - **提供方原生发现经本插件的 ambient context 回答**——不点名凭据的路由交由目录提供方自身解析，它会询问环境值（`AZURE_OPENAI_API_KEY`、`AWS_PROFILE` 及各提供方自有集合）与本地凭据文件。两个问题都在这里得到回答：凭据 seam 先于进程环境被查询，文件存在性则针对宿主进程的文件系统以 `~` 展开后检查。它做不到的是*读取*凭据文件内容——自行解析 `~/.aws/credentials` 的提供方会直接读取，不经该 seam。
 - **重置恢复继承配置**——重置下层 profile 提供的路由会恢复该路由。
 - **完整替换 Config 可以移除继承的字典条目**——字段重置则恢复其继承值。

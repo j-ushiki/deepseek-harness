@@ -157,7 +157,7 @@ describe('AuthorizationController', () => {
     await expect(stream.next()).rejects.toMatchObject({ code: 'authorization/failed' })
   })
 
-  it('preserves a literal provider refusal in the Remote diagnostic', async () => {
+  it('hides a literal provider refusal in the Remote diagnostic', async () => {
     const { ctx, controller } = await boot()
     const key = credentialKey('test-plugin', 'literal-refusal')
     ctx.effect(() => ctx.authorization.registerFlow({
@@ -165,7 +165,26 @@ describe('AuthorizationController', () => {
       // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- a foreign login library may reject with a literal.
       run: () => Promise.reject('provider refused'),
     }))
-    await expect(drive(controller, key, '')).rejects.toMatchObject({ code: 'authorization/failed', message: 'provider refused' })
+    await expect(drive(controller, key, '')).rejects.toMatchObject({ code: 'authorization/failed', message: 'Sign-in failed. Try again or check the Host configuration.' })
+  })
+
+  it('keeps a safe missing-flow refusal actionable', async () => {
+    const { controller } = await boot()
+    await expect(drive(controller, 'test-plugin/missing', '')).rejects.toMatchObject({
+      code: 'authorization/failed', message: 'no authorization flow is registered for "test-plugin/missing"',
+    })
+  })
+
+  it('redacts an authorization failure outside the public refusal set', async () => {
+    const { ctx, controller } = await boot()
+    const key = credentialKey('test-plugin', 'uncommitted')
+    ctx.effect(() => ctx.authorization.registerFlow({
+      key, label: 'Uncommitted', methods: [{ id: 'oauth', label: 'Sign in' }],
+      run: () => Promise.resolve(),
+    }))
+    await expect(drive(controller, key, '')).rejects.toMatchObject({
+      code: 'authorization/failed', message: 'Sign-in failed. Try again or check the Host configuration.',
+    })
   })
 
   it('rejects a malformed key and reports an unanswered id as stale', async () => {

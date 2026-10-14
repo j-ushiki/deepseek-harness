@@ -71,3 +71,251 @@ index 7da1c45de8a106a68411cf79bec75f553534a1c7..296d131b59b1cf75f2516c39e85bba72
                  break;
              }
              case "toolcall_end":
+diff --git a/dist/auth/oauth/openai-chatgpt.js b/dist/auth/oauth/openai-chatgpt.js
+index a351c28..40446fa 100644
+--- a/dist/auth/oauth/openai-chatgpt.js
++++ b/dist/auth/oauth/openai-chatgpt.js
+@@ -9,7 +9,7 @@ import { createServer } from "node:http";
+ import { oauthErrorHtml, oauthSuccessHtml } from "../../utils/oauth-page.js";
+ import { getProviderEnvValue } from "../../utils/provider-env.js";
+ import { generatePKCE } from "./pkce.js";
+-// every login registers a new client with this ID; OpenAI returns the issued client ID in the callback
++// Initial sign-in registers a client; returning sign-in reuses its issued ID.
+ const DYNAMIC_CLIENT_ID = "dynamic_agent_client";
+ const AGENT_NAME_HINT = "Pi";
+ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+@@ -27,7 +27,7 @@ const EXPIRY_MARGIN_MS = 3 * 60 * 1000;
+ function randomValue() {
+     return randomBytes(32).toString("base64url");
+ }
+-function authorizationResultFromCallback(url, expectedState) {
++function authorizationResultFromCallback(url, expectedState, expectedClientId) {
+     const code = url.searchParams.get("code");
+     if (!code)
+         throw new Error("Missing authorization code");
+@@ -36,12 +36,15 @@ function authorizationResultFromCallback(url, expectedState) {
+         throw new Error("Missing OAuth state");
+     if (state !== expectedState)
+         throw new Error("OAuth state mismatch");
+-    const clientId = url.searchParams.get("client_id")?.trim();
+-    if (!clientId)
++    const returnedClientId = url.searchParams.get("client_id")?.trim();
++    if (expectedClientId && returnedClientId && returnedClientId !== expectedClientId)
++        throw new Error("OpenAI OAuth callback changed the selected client ID");
++    const clientId = returnedClientId || expectedClientId;
++    if (!clientId || clientId === DYNAMIC_CLIENT_ID)
+         throw new Error("OpenAI OAuth registration callback did not contain an issued client ID");
+     return { code, clientId };
+ }
+-function authorizationResultFromManualInput(input, expectedState) {
++function authorizationResultFromManualInput(input, expectedState, expectedClientId, redirectUri) {
+     let url;
+     try {
+         url = new URL(input.trim());
+@@ -49,20 +52,22 @@ function authorizationResultFromManualInput(input, expectedState) {
+     catch {
+         throw new Error("Paste the full callback URL from the browser");
+     }
+-    const expected = new URL(REDIRECT_URI);
++    const expected = new URL(redirectUri);
+     if (url.origin !== expected.origin || url.pathname !== expected.pathname) {
+-        throw new Error(`The pasted callback URL must start with ${REDIRECT_URI}`);
++        throw new Error(`The pasted callback URL must start with ${redirectUri}`);
+     }
++    if (url.searchParams.get("state") !== expectedState)
++        throw new Error("OAuth state mismatch");
+     const error = url.searchParams.get("error");
+     if (error)
+-        throw new Error(`ChatGPT authorization failed: ${error}`);
+-    return authorizationResultFromCallback(url, expectedState);
++        throw new Error("ChatGPT authorization was refused");
++    return authorizationResultFromCallback(url, expectedState, expectedClientId);
+ }
+ function sendHtml(response, status, body) {
+     response.writeHead(status, { "Content-Type": "text/html; charset=utf-8" });
+     response.end(body);
+ }
+-function startCallbackServer(expectedState) {
++function startCallbackServer(expectedState, expectedClientId, port) {
+     return new Promise((resolve, reject) => {
+         let resolveResult;
+         let rejectResult;
+@@ -77,15 +82,19 @@ function startCallbackServer(expectedState) {
+                     sendHtml(response, 404, oauthErrorHtml("Callback route not found."));
+                     return;
+                 }
++                if (url.searchParams.get("state") !== expectedState) {
++                    sendHtml(response, 400, oauthErrorHtml("OAuth state mismatch"));
++                    return;
++                }
+                 const error = url.searchParams.get("error");
+                 if (error) {
+-                    sendHtml(response, 400, oauthErrorHtml("ChatGPT was not connected.", `Error: ${error}`));
++                    sendHtml(response, 400, oauthErrorHtml("ChatGPT was not connected."));
+                     rejectResult(new Error(`ChatGPT authorization failed: ${error}`));
+                     return;
+                 }
+                 let authorizationResult;
+                 try {
+-                    authorizationResult = authorizationResultFromCallback(url, expectedState);
++                    authorizationResult = authorizationResultFromCallback(url, expectedState, expectedClientId);
+                 }
+                 catch (error) {
+                     const message = error instanceof Error ? error.message : "Invalid callback";
+@@ -100,10 +109,12 @@ function startCallbackServer(expectedState) {
+             }
+         });
+         server.once("error", reject);
+-        server.listen(CALLBACK_PORT, CALLBACK_HOST, () => {
++        server.listen(port, CALLBACK_HOST, () => {
+             server.removeListener("error", reject);
+             server.on("error", rejectResult);
+-            resolve({ server, result });
++            const address = server.address();
++            const redirectUri = `http://127.0.0.1:${address.port}${CALLBACK_PATH}`;
++            resolve({ server, result, redirectUri });
+         });
+     });
+ }
+@@ -118,8 +129,7 @@ async function requestToken(body, signal) {
+         signal,
+     });
+     if (!response.ok) {
+-        const responseBody = await response.text().catch(() => "");
+-        throw new Error(`OpenAI OAuth token request failed (${response.status}): ${responseBody || response.statusText}`);
++        throw new Error(`OpenAI OAuth token request failed (${response.status})`);
+     }
+     const data = await response.json();
+     if (typeof data !== "object" || data === null || Array.isArray(data)) {
+@@ -141,8 +151,8 @@ function credentialFromTokenResponse(token, clientId) {
+         throw new Error("OpenAI OAuth token response has invalid expires_in");
+     }
+     const scopes = scope.trim().split(/\s+/).filter(Boolean);
+-    if (!scopes.includes(DIRECT_TOKEN_SCOPE)) {
+-        throw new Error(`OpenAI OAuth grant did not include ${DIRECT_TOKEN_SCOPE}`);
++    if (!scopes.includes(DIRECT_TOKEN_SCOPE) || !scopes.includes("resource.invoke")) {
++        throw new Error("OpenAI OAuth grant did not include the required ChatGPT plan-use scopes");
+     }
+     return {
+         type: "oauth",
+@@ -153,13 +163,13 @@ function credentialFromTokenResponse(token, clientId) {
+         scopes,
+     };
+ }
+-async function exchangeAuthorizationCode(code, verifier, clientId, signal) {
++async function exchangeAuthorizationCode(code, verifier, clientId, signal, nonce, options, redirectUri) {
+     const token = await requestToken(new URLSearchParams({
+         grant_type: "authorization_code",
+         client_id: clientId,
+         code,
+         code_verifier: verifier,
+-        redirect_uri: REDIRECT_URI,
++        redirect_uri: redirectUri,
+         resource: RESOURCE,
+     }), signal);
+     // Pi does not use the ID token to identify the user or read profile data.
+@@ -167,7 +177,8 @@ async function exchangeAuthorizationCode(code, verifier, clientId, signal) {
+     if (typeof token.id_token !== "string" || token.id_token.trim().length === 0) {
+         throw new Error("OpenAI OAuth token response did not contain an ID token");
+     }
+-    return credentialFromTokenResponse(token, clientId);
++    const subject = await options?.verifyChatGPTIdToken?.(token.id_token, { clientId, nonce });
++    return { ...credentialFromTokenResponse(token, clientId), idToken: token.id_token, ...subject === undefined ? {} : { subject } };
+ }
+ async function refreshAccessToken(credential, signal) {
+     const clientId = credential.clientId;
+@@ -180,7 +191,7 @@ async function refreshAccessToken(credential, signal) {
+         refresh_token: credential.refresh,
+         resource: RESOURCE,
+     }), signal);
+-    return credentialFromTokenResponse(token, clientId);
++    return { ...credential, ...credentialFromTokenResponse(token, clientId) };
+ }
+ /** OpenAI identifies each installation ("agent host") by a stable URI such as `urn:uuid:<uuid>`. */
+ function agentHostId(deviceId) {
+@@ -196,18 +207,18 @@ async function loginOpenAIChatGPT(interaction, options) {
+     const nonce = randomValue();
+     // Without this server, the browser's callback would reach whatever else holds the port (another
+     // pending login or the Codex CLI), which rejects it as a state mismatch. Fail with a clear error instead.
+-    const callback = await startCallbackServer(state).catch((error) => {
++    const callback = await startCallbackServer(state, options?.chatgptClient?.clientId, options?.callbackPort ?? CALLBACK_PORT).catch((error) => {
+         if (!(error instanceof Error && "code" in error && error.code === "EADDRINUSE"))
+             throw error;
+         throw new Error(`Port ${CALLBACK_PORT} is in use, probably by an unfinished login in another pi session or by the Codex CLI. Cancel that login and try again.`);
+     });
+     const authorizationUrl = new URL(AUTHORIZE_URL);
+     authorizationUrl.search = new URLSearchParams({
+-        client_id: DYNAMIC_CLIENT_ID,
+-        agent_name_hint: options?.agentName ?? AGENT_NAME_HINT,
++        client_id: options?.chatgptClient?.clientId ?? DYNAMIC_CLIENT_ID,
++        ...options?.chatgptClient ? { id_token_hint: options.chatgptClient.idToken } : { agent_name_hint: options?.agentName ?? AGENT_NAME_HINT },
+         ext_agent_host_id: hostId,
+         response_type: "code",
+-        redirect_uri: REDIRECT_URI,
++        redirect_uri: callback.redirectUri,
+         resource: RESOURCE,
+         scope: SCOPE,
+         state,
+@@ -225,14 +236,14 @@ async function loginOpenAIChatGPT(interaction, options) {
+         .prompt({
+         type: "manual_code",
+         message: "Complete login in your browser, or paste the final redirect URL here:",
+-        placeholder: REDIRECT_URI,
++        placeholder: callback.redirectUri,
+         signal: AbortSignal.any([manualAbort.signal, interaction.signal]),
+     })
+-        .then((input) => authorizationResultFromManualInput(input, state));
++        .then((input) => authorizationResultFromManualInput(input, state, options?.chatgptClient?.clientId, callback.redirectUri));
+     try {
+         const result = await Promise.race([callback.result, manualCode]);
+         interaction.notify({ type: "progress", message: "Exchanging authorization code for tokens..." });
+-        return await exchangeAuthorizationCode(result.code, verifier, result.clientId, interaction.signal);
++        return await exchangeAuthorizationCode(result.code, verifier, result.clientId, interaction.signal, nonce, options, callback.redirectUri);
+     }
+     catch (error) {
+         if (interaction.signal.aborted)
+@@ -241,13 +252,15 @@ async function loginOpenAIChatGPT(interaction, options) {
+     }
+     finally {
+         manualAbort.abort();
+-        callback.server.close();
++        await new Promise(resolve => {
++            callback.server.close(resolve);
++            callback.server.closeAllConnections();
++        });
+         // close() only stops accepting new connections. Browsers open spare connections ahead of
+         // time, and one that has not sent a request yet stays open and attached to this server.
+         // A later login in the same process starts a new server with a new state, but the browser
+         // may send that login's callback over the spare connection. This server would then handle
+         // it and reject it with "OAuth state mismatch", and the new login would never see it.
+-        callback.server.closeAllConnections();
+     }
+ }
+ export const openaiChatGPTOAuth = {
+@@ -257,7 +270,7 @@ export const openaiChatGPTOAuth = {
+     login: loginOpenAIChatGPT,
+     refresh: refreshAccessToken,
+     async toAuth(credential) {
+-        return { apiKey: credential.access };
++        return { apiKey: credential.access, baseUrl: RESOURCE };
+     },
+ };
+ //# sourceMappingURL=openai-chatgpt.js.map
+\ No newline at end of file
+diff --git a/dist/auth/types.d.ts b/dist/auth/types.d.ts
+index 35dd81a..05d8bed 100644
+--- a/dist/auth/types.d.ts
++++ b/dist/auth/types.d.ts
+@@ -207,6 +207,12 @@ export interface LoginOptions {
+      * Codex originator. Defaults to pi's own name.
+      */
+     agentName?: string;
++    /** Loopback callback port; zero asks the operating system to allocate one. */
++    callbackPort?: number;
++    /** Saved registration used for returning ChatGPT sign-in. */
++    chatgptClient?: { clientId: string; idToken: string; subject: string };
++    /** Verify the ChatGPT ID token and return its subject before a grant is accepted. */
++    verifyChatGPTIdToken?: (token: string, expected: { clientId: string; nonce: string }) => Promise<string>;
+ }
+ /**
+  * OAuth auth. The `refresh`/`toAuth` split lets `Models` own the locked

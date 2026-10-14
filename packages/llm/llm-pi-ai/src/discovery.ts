@@ -71,6 +71,7 @@ interface ListingTopProvider {
 /** One entry of a supported `GET /models` reply. */
 interface ListingEntry {
   id?: unknown
+  slug?: unknown
   /** Common gateway extensions; absent from the official listings. */
   name?: unknown
   display_name?: unknown
@@ -166,7 +167,8 @@ async function readBounded(response: Response, url: string): Promise<string> {
 
 /**
  * Read one supported model-listing reply. The standard `data` array takes
- * precedence when both supported formats are present. An enriched `models`
+ * precedence when multiple formats are present. A ChatGPT `models` array
+ * retains only visible slugs, in server order. An enriched `models`
  * map uses each property key as the endpoint-facing id; its nested `id` is
  * only a fallback for an empty key because gateways may put a canonical model
  * identity there instead of the alias they accept on requests. Only
@@ -185,6 +187,10 @@ function readListing(body: unknown): LlmDiscoveredModel[] {
   if (Array.isArray(data)) {
     const rows = data as readonly unknown[]
     listed = rows.map(raw => ({ raw }))
+  } else if (Array.isArray(listing?.models)) {
+    const rows = listing.models as readonly unknown[]
+    listed = rows.filter(row => typeof row === 'object' && row !== null
+      && 'visibility' in row && row.visibility === 'list').map(raw => ({ raw }))
   } else {
     const models = listing?.models
     if (models === null || typeof models !== 'object' || Array.isArray(models)) {
@@ -201,7 +207,7 @@ function readListing(body: unknown): LlmDiscoveredModel[] {
   const models: LlmDiscoveredModel[] = []
   for (const { key, raw } of listed) {
     const entry = raw as ListingEntry | null
-    const id = label(key, entry?.id)
+    const id = label(key, entry?.slug, entry?.id)
     if (id === undefined) continue
     const name = label(entry?.name, entry?.display_name, entry?.displayName) ?? id
     const contextWindow = capacity(

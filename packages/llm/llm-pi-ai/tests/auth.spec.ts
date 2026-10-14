@@ -224,6 +224,10 @@ describe('pi-ai ambient auth context', () => {
     await expect(authContextFrom(await stored()).env('PI_AUTH_AMBIENT')).resolves.toBe('from-environment')
   })
 
+  it('uses the launch environment when no credential service is mounted', async () => {
+    await expect(authContextFrom(new Context()).env('PI_AUTH_AMBIENT')).resolves.toBe('from-environment')
+  })
+
   it('answers "not set" for a name no reference could ever address', async () => {
     // pi-ai asks about provider-declared names; one outside the reference
     // grammar has no reference to miss, and must not throw.

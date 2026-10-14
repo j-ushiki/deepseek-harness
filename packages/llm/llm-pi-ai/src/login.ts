@@ -12,25 +12,16 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { AuthorizationMethod, AuthorizationPrompt, AuthorizationSession } from '@deepseek-ai/dsh-authorization'
 import { isCredentialKeySegment } from '@deepseek-ai/dsh-credentials'
 import { catalogProvider, catalogProviderIds } from './catalog.ts'
-import { recordKeyFor } from './auth.ts'
+import { recordKeyFor, toRecord } from './auth.ts'
+import { chatgptLoginOptions } from './chatgpt.ts'
 import type { PiAiAuthInjection } from './adapter.ts'
 import { createModels } from './models.ts'
-
-/**
- * Catalog providers whose OAuth login this adapter does not offer. pi-ai's Sign
- * in with ChatGPT (`openai`) identifies the installation to OpenAI with a
- * stable UUID that the app supplies through `LoginOptions.getDeviceId`, and it
- * refuses to start without one. The harness keeps no installation ID meant for
- * a third-party account sign-in, so the route signs in with an API key.
- */
-const UNSERVED_OAUTH: ReadonlySet<string> = new Set(['openai'])
 
 /**
  * The login methods one catalog provider offers.
  *
  * A method appears only when pi-ai can actually run it: `oauth` carries a
- * `login` that runs without app-supplied login options except for the
- * providers in {@link UNSERVED_OAUTH}, while an api-key method has one only
+ * `login`, while an api-key method has one only
  * when the provider collects its key interactively — which every installed one
  * currently does, so a key is typed into pi-ai's own prompt rather than into
  * the settings form.
@@ -39,7 +30,7 @@ const UNSERVED_OAUTH: ReadonlySet<string> = new Set(['openai'])
  */
 function loginMethods(provider: Provider | undefined): AuthorizationMethod[] {
   const methods: AuthorizationMethod[] = []
-  const oauth = provider === undefined || UNSERVED_OAUTH.has(provider.id) ? undefined : provider.auth.oauth
+  const oauth = provider?.auth.oauth
   if (oauth !== undefined) methods.push({ id: 'oauth', label: oauth.loginLabel ?? oauth.name })
   const apiKey = provider?.auth.apiKey
   if (apiKey?.login !== undefined) methods.push({ id: 'api-key', label: apiKey.name })
@@ -127,8 +118,9 @@ function restate(prompt: AuthPrompt): AuthorizationPrompt {
  * moment the plugin mounts rather than appearing once a profile does.
  * @param ctx - the plugin context carrying `ctx.authorization`.
  * @param auth - the injectables every collection here is built with.
+ * @param chatgptHostIdPath - optional installation UUID file for ChatGPT sign-in.
  */
-export function registerPiAiFlows(ctx: Context, auth: PiAiAuthInjection): void {
+export function registerPiAiFlows(ctx: Context, auth: PiAiAuthInjection, chatgptHostIdPath?: string): void {
   for (const providerId of catalogProviderIds()) {
     const provider = catalogProvider(providerId)
     const [first, ...rest] = loginMethods(provider)
@@ -152,21 +144,21 @@ export function registerPiAiFlows(ctx: Context, auth: PiAiAuthInjection): void {
       label: provider.name,
       methods: [first, ...rest],
       async run(session) {
-        // A collection of its own, holding only the provider being signed
-        // into: login is not serving requests, and the credential it produces
-        // lands in the shared store either way.
-        const models = createModels(auth)
+        // Login uses pi-ai's private memory store; the seam owns the durable commit.
+        const models = createModels({ authContext: auth.authContext })
         models.setProvider(provider)
         // Total over the two ids declared above, and the seam only ever hands
         // back one a flow declared.
         const type: AuthType = session.method === 'oauth' ? 'oauth' : 'api_key'
-        // pi-ai persists what the login returns through that same store, which
-        // is what makes it the single writer of this record.
-        await models.login(providerId, type, {
+        const options = providerId === 'openai' && type === 'oauth'
+          ? await chatgptLoginOptions(auth.credentials, chatgptHostIdPath, session.signal)
+          : undefined
+        const credential = await models.login(providerId, type, {
           signal: session.signal,
           notify: (event) => { relay(event, session) },
           prompt: prompt => session.prompt(restate(prompt)),
-        })
+        }, options)
+        await session.commit(toRecord(credential))
       },
     })
   }
