@@ -1,0 +1,26 @@
+- dialog "Settings":
+  - navigation:
+    - text: Settings
+    - button "General"
+    - button "Models"
+    - button "Built-in plugins"
+    - button "Agent presets"
+  - button "Open configuration file"
+  - button "Close"
+  - heading "Models" [level=2]
+  - paragraph: Enter your API keys to use models from the following providers.
+  - list:
+    - listitem:
+      - text: signin-smoke Custom
+      - button "Edit signin-smoke": Edit
+      - button "Delete signin-smoke": Delete
+      - text: signin-smoke API key
+      - textbox "API key":
+        - /placeholder: Enter an API key, or leave blank to use environment authentication
+      - group: Customized settings
+      - text: Fixture account Sign in with your account instead of an API key.
+      - button "Sign in"
+      - alert: "Sign-in failed: Sign-in failed. Try again or check the Host configuration."
+      - button "Cancel"
+      - button "Apply"
+  - button "Add model provider"

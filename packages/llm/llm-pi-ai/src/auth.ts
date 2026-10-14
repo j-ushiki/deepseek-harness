@@ -88,7 +88,7 @@ function toPiCredential(record: CredentialRecord | undefined): Credential | unde
  * @param credential - what a login or refresh produced.
  * @returns the record to commit, in the union the credential seam stores.
  */
-function toRecord(credential: Credential): CredentialRecord {
+export function toRecord(credential: Credential): CredentialRecord {
   if (credential.type === 'api_key') {
     return {
       kind: 'api-key',
@@ -160,7 +160,8 @@ export function credentialStoreFrom(ctx: Context): CredentialStore {
       }
       return mine
     },
-    async modify(providerId, mutate) {
+    async modify(providerId, mutate, options) {
+      options?.signal?.throwIfAborted()
       if (!isCredentialKeySegment(providerId)) {
         throw new LlmError(
           `llm-pi-ai: provider id "${providerId}" cannot address a stored credential record (a record id is a`
@@ -170,7 +171,9 @@ export function credentialStoreFrom(ctx: Context): CredentialStore {
         )
       }
       const stored = await writableStore(ctx).modifyRecord(recordKeyFor(providerId), async (current) => {
+        options?.signal?.throwIfAborted()
         const next = await mutate(toPiCredential(current))
+        options?.signal?.throwIfAborted()
         return next === undefined ? undefined : toRecord(next)
       })
       return toPiCredential(stored)
