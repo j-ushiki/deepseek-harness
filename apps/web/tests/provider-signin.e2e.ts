@@ -22,6 +22,7 @@ it('stores a sign-in grant and releases a cancelled attempt through the browser'
       try {
         session.notify({ message: 'Continue in your browser', url: 'https://auth.example/start', code: 'TEST-CODE' })
         const code = await session.prompt({ kind: 'secret', message: 'Exchange code' })
+        if (code === 'fixture-error') throw new Error('REVIEW_ACCESS_SECRET')
         await session.commit({ kind: 'grant', payload: { code } })
       } finally {
         finished += 1
@@ -59,5 +60,14 @@ it('stores a sign-in grant and releases a cancelled attempt through the browser'
   await dialog.getByRole('status').filter({ hasText: 'Sign-in was cancelled.' }).waitFor()
   await expect.poll(() => finished).toBe(2)
   expect(scaffold.ctx.authorization.describe(key)?.inFlight).toBe(false)
+  await signIn.click()
+  await prompt.waitFor()
+  await prompt.fill('fixture-error')
+  await dialog.getByRole('button', { name: 'Submit', exact: true }).click()
+  const failure = dialog.getByRole('alert').filter({ hasText: 'Sign-in failed. Try again or check the Host configuration.' })
+  await failure.waitFor()
+  expect(await failure.textContent()).not.toContain('REVIEW_ACCESS_SECRET')
+  const failedGolden = fileURLToPath(new URL('./expected/provider-signin/failed.expected.md', import.meta.url))
+  await compareOrRefreshGolden(failedGolden, await captureStableAria(page, '[role="dialog"]', scaffold.workspaceCwd), webSnapshotMode())
   expect(await scaffold.ctx.credentials.readRecord(key)).toEqual({ kind: 'grant', payload: { code: 'fixture-exchange' } })
 })

@@ -1767,6 +1767,8 @@ export interface Config extends ProtocolConfig {
 ```ts config-catalog
 /** Plugin configuration: the provider routes this instance owns. */
 export interface Config {
+  /** File holding this installation's ChatGPT host UUID; defaults to `<DSH_HOME>/.chatgpt-host-id`. */
+  chatgptHostIdPath?: string
   /**
    * pi-ai provider routes, keyed by provider. An empty (or omitted) dict is
    * the dormant settings-driven posture: the adapter mounts with no routes

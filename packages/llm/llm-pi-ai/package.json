@@ -38,10 +38,13 @@
     "@deepseek-ai/cordis-plugin-loader": "workspace:~"
   },
   "dependencies": {
+    "@deepseek-ai/dsh-atomic-write": "workspace:*",
     "@deepseek-ai/dsh-brand": "workspace:*",
+    "@deepseek-ai/dsh-home-paths": "workspace:*",
     "@deepseek-ai/dsh-util-values": "workspace:*",
     "@deepseek-ai/schemastery": "workspace:~",
-    "@earendil-works/pi-ai": "^1.0.2"
+    "@earendil-works/pi-ai": "^1.0.2",
+    "jose": "^6.2.3"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:~",

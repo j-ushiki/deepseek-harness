@@ -68,7 +68,8 @@ import type {} from '@deepseek-ai/dsh-fs'
 import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
 import { PiAiAdapter } from './adapter.ts'
 import { authContextFrom, credentialStoreFrom } from './auth.ts'
-import { catalogProviderIds } from './catalog.ts'
+import { catalogModels, catalogProvider, catalogProviderIds } from './catalog.ts'
+import { createModels } from './models.ts'
 import { assertServiceable, Config, resolveProfiles } from './config.ts'
 import type { ResolvedPiAiProviderProfile } from './config.ts'
 import { discoverModels } from './discovery.ts'
@@ -238,7 +239,7 @@ export function apply(ctx: Context, config: Config): void {
   // Scoped to the authorization seam rather than injected outright, because a
   // composition without it (headless, ACP) simply has no surface to sign in
   // from, while everything else this plugin does still works.
-  ctx.inject(['authorization'], (authorized) => { registerPiAiFlows(authorized, auth) })
+  ctx.inject(['authorization'], (authorized) => { registerPiAiFlows(authorized, auth, config.chatgptHostIdPath) })
   // The full installed catalog is configurable from the moment the plugin
   // mounts — dormant or not — so configuration surfaces can offer every
   // pi-ai provider before any route exists. Hand-declared routes join it as
@@ -279,10 +280,35 @@ export function apply(ctx: Context, config: Config): void {
   // except the stored credential and deployment-owned headers: the curated UI
   // accepts neither, so an already-configured route supplies both inside the
   // Host rather than widening the discovery request.
-  ctx.llm.registerModelDiscovery(settingsNs, (request, signal) => discoverModels(
-    { ...request, ...signal === undefined ? {} : { signal } },
-    () => storedDiscoveryProfile(request.provider),
-  ))
+  ctx.llm.registerModelDiscovery(settingsNs, async (request, signal) => {
+    const operation = { ...request, ...signal === undefined ? {} : { signal } }
+    const authOptions = signal === undefined ? {} : { signal }
+    if (request.provider === 'openai' && request.apiKey === undefined
+      && profiles().get('openai')?.apiKeyEnv === undefined
+      && (await auth.credentials.read('openai', authOptions))?.type === 'oauth') {
+      const provider = catalogProvider('openai')
+      if (provider?.baseUrl === undefined) throw new LlmError('The OpenAI catalog provider is unavailable.', 'DISCOVERY_FAILED')
+      if (request.baseURL !== undefined && request.baseURL.replace(/\/+$/, '') !== provider.baseUrl) {
+        throw new LlmError('ChatGPT subscription discovery uses the public OpenAI endpoint; remove the custom baseURL or use an API key.', 'DISCOVERY_FAILED')
+      }
+      const models = createModels(auth)
+      models.setProvider(provider)
+      const resolved = await models.getAuth('openai', authOptions)
+      if (resolved?.auth.apiKey === undefined) throw new LlmError('Reconnect ChatGPT before fetching models.', 'DISCOVERY_FAILED')
+      const { provider: _provider, ...draft } = operation
+      const found = await discoverModels({
+        ...draft, baseURL: provider.baseUrl, api: 'openai-responses', apiKey: resolved.auth.apiKey,
+      }, () => storedDiscoveryProfile(request.provider))
+      const catalog = catalogModels('openai')
+      return found.map((model) => {
+        const known = catalog.get(model.id)
+        return known === undefined ? model : {
+          contextWindow: known.contextWindow, maxTokens: known.maxTokens, inputModalities: [...known.input], ...model,
+        }
+      })
+    }
+    return discoverModels(operation, () => storedDiscoveryProfile(request.provider))
+  })
   // Route effects bind to this apply fiber via the stable `ctx` reference,
   // even when a swap runs inside the scoped settings callback below. A bare
   // mount (zero routes) is the dormant posture: nothing registers until a

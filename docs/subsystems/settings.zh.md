@@ -42,7 +42,8 @@ Host service backing the generated `ctx.remote.authorization` namespace. An atte
 
 /**
  * Run one attempt and stream what it says to the human. The stream ends with
- * `settled`; a failed attempt ends it with an `authorization/failed` error.
+ * `settled`; a failed attempt ends it with a redacted `authorization/failed`
+ * error. Raw provider diagnostics remain only on the internal cause chain.
  * @param key - the credential record to authorize, as `<scope>/<id>`.
  * @param method - the flow's method to run; `undefined` runs its first.
  * @param signal - stream lifetime; closing the stream withdraws the attempt.
