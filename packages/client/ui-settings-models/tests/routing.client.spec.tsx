@@ -14,6 +14,9 @@ const operations: ModelsOperations = {
   storeCredential: vi.fn(),
   removeCredential: vi.fn(),
   writeSettings: vi.fn(),
+  describeSignIn: vi.fn(() => Promise.resolve(undefined)),
+  signIn: vi.fn(),
+  answerSignIn: vi.fn(),
 }
 
 const providers = [
