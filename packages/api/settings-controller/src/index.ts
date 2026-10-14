@@ -1,8 +1,7 @@
 /**
  * Host Remote owner for the configuration surfaces over the settings-domain
- * seams. Two namespaces: `settings`, the redacted reads and writes of
- * `ctx.settings`, owned by the class below; and `credentials`, mounted from
- * here as its own plugin.
+ * seams: redacted settings and credential reads and writes, plus streamed
+ * authorization notices and prompts for human-guided sign-in.
  *
  * @module @deepseek-ai/dsh-api-settings-controller
  */
@@ -18,9 +17,11 @@ import type {
 import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 import { z } from 'zod'
+import { AuthorizationController } from './authorization.ts'
 import { CredentialsController } from './credentials.ts'
 import type { SettingsDocumentOpenValue } from './types.ts'
 
+export { AuthorizationController } from './authorization.ts'
 export { CredentialsController } from './credentials.ts'
 export type * from './types.ts'
 
@@ -78,14 +79,15 @@ export class SettingsController extends TypertRemoteService {
 
   /**
    * Register the settings namespace and mount the credentials namespace beside
-   * it. Both namespaces stay registered when a provider is absent so calls can
-   * return the configuration API's actionable missing-provider diagnostic.
-   * @param ctx - Host context where settings and credential providers may be mounted.
+   * it, together with authorization. Each namespace remains registered without
+   * its provider so calls return the configuration API's actionable missing-provider diagnostic.
+   * @param ctx - Host context where settings, credential, and authorization providers may be mounted.
    */
   constructor(ctx: Context, internals: SettingsControllerInternals = {}) {
     super(ctx, 'settingsController', { namespace: 'settings' })
     this.openTextFile = internals.openTextFile ?? openNativeTextFile
     ctx.plugin(CredentialsController)
+    ctx.plugin(AuthorizationController)
   }
 
   /**

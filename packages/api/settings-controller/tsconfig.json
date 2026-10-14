@@ -18,6 +18,9 @@
       "path": "../../preset/agent-preset-registry"
     },
     {
+      "path": "../../credentials/authorization"
+    },
+    {
       "path": "../../credentials/credentials"
     },
     {
@@ -31,6 +34,9 @@
     },
     {
       "path": "../../typert/protocol"
+    },
+    {
+      "path": "../../util/brand"
     }
   ]
 }

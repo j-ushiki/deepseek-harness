@@ -145,6 +145,13 @@ export const en = {
   onboardingLater: 'Configure later',
   onboardingSave: 'Save and continue',
   onboardingSaving: 'Saving…',
+  signIn: 'Sign in',
+  signInHint: 'Sign in with your account instead of an API key.',
+  signInCancel: 'Cancel sign-in',
+  signInSubmit: 'Submit',
+  signInDone: 'Signed in.',
+  signInCancelled: 'Sign-in was cancelled.',
+  signInFailed: 'Sign-in failed',
   keyRequired: 'Enter an API key to continue.',
 }
 
@@ -296,5 +303,12 @@ export const zh: { [Key in keyof typeof en]: string } = {
   onboardingLater: '稍后配置',
   onboardingSave: '保存并继续',
   onboardingSaving: '保存中…',
+  signIn: '登录',
+  signInHint: '使用账号登录，而不是填写 API 密钥。',
+  signInCancel: '取消登录',
+  signInSubmit: '提交',
+  signInDone: '已登录。',
+  signInCancelled: '已取消登录。',
+  signInFailed: '登录失败',
   keyRequired: '请输入 API 密钥后继续。',
 }
