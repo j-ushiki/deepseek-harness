@@ -211,7 +211,7 @@ interface ToolArgsMap {
     /** Path to the image file, resolved by the filesystem backend. */
     file_path: string;
   } & Record<string, JsonValue>;
-  /** Create a scheduled task. At each occurrence of rrule, prompt is delivered to the target session as a scheduled message from the user. The result includes the task id and the next occurrence as scheduledAt in UTC and scheduledAtLocal in the zone of rrule. After downtime, only the latest missed occurrence is delivered. Delivery can repeat after a crash. */
+  /** Create a scheduled task. At each occurrence of rrule, prompt is delivered to the target session as a scheduled message from the user. Provider, model, and reasoning_effort select the model of the sessions that a new_once or new target creates. The result includes the task id and the next occurrence as scheduledAt in UTC and scheduledAtLocal in the zone of rrule. After downtime, only the latest missed occurrence is delivered. Delivery can repeat after a crash. */
   schedule_create: {
     /** Task name of at most 120 characters in the user's language: action plus object. Omit timing, status, ids, and bracketed suffixes. */
     title: string;
@@ -219,10 +219,16 @@ interface ToolArgsMap {
     prompt: string;
     /** Supported RFC 5545 subset: one DTSTART line, a newline, and one RRULE line. DTSTART ends in Z for UTC or carries TZID with an IANA time zone; a fixed offset such as UTC+5 is Etc/GMT-5, with the sign reversed. DTSTART must name an existing local time. A TZID rule keeps local clock time across daylight-saving changes; generated nonexistent local times are skipped, and repeated ones occur once, at the earlier instant. DTSTART may be in the past; delivery starts with the first occurrence after creation. A one-time delivery is RRULE:FREQ=DAILY;COUNT=1. No SECONDLY; BYSECOND takes one value. COUNT is at most 1000; use UNTIL for longer rules. MINUTELY and HOURLY accept no BY parts, so select clock times with DAILY or WEEKLY plus BYHOUR and BYMINUTE. BYMONTHDAY and ordinal BYDAY require MONTHLY or YEARLY; BYYEARDAY and BYWEEKNO require YEARLY. Ordinal BYDAY cannot combine with BYWEEKNO. Each FREQ period allows at most 10080 candidates before BYSETPOS, which accepts at most 31 values. UNTIL is a UTC instant ending in Z. Example: "DTSTART;TZID=Asia/Singapore:20260901T080000\nRRULE:FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1" */
     rrule: string;
-    /** this_session delivers to this session; new_once delivers to the same new session every time, opened at the first delivery; new opens a different new session for every delivery. New sessions use this session's working directory and preset. With this_session or new_once, a delivery waits until the previous one finishes, and only the latest occurrence that passed meanwhile is delivered. Use this_session for reminders and for follow-ups to this conversation; use new_once or new for independent work, such as a recurring report, and whenever the user asks for a new conversation. */
+    /** this_session delivers to this session; new_once delivers to the same new session every time, opened at the first delivery; new opens a different new session for every delivery. New sessions use this session's working directory and preset, and any model selected by provider, model, and reasoning_effort. With this_session or new_once, a delivery waits until the previous one finishes, and only the latest occurrence that passed meanwhile is delivered. Use this_session for reminders and for follow-ups to this conversation; use new_once or new for independent work, such as a recurring report, and whenever the user asks for a new conversation. */
     target: "this_session" | "new_once" | "new";
+    /** Provider id of the model used for each session that a new_once or new target creates; requires model. Omit both to use the default model. An existing session target keeps its own model. */
+    provider?: string;
+    /** Model id within that provider; requires provider. */
+    model?: string;
+    /** Reasoning effort id for the selected model; requires provider and model. Omit to use the model's default. */
+    reasoning_effort?: string;
   } & Record<string, JsonValue>;
-  /** Update, pause, resume, or delete one scheduled task by id. Deleting does not retract queued messages. */
+  /** Update, pause, resume, or delete one scheduled task by id. Supplying provider, model, and reasoning_effort without target changes the model of the sessions this task creates. Deleting does not retract queued messages. */
   schedule_edit: {
     /** Task id. */
     id: string;
@@ -234,8 +240,14 @@ interface ToolArgsMap {
     prompt?: string;
     /** New recurrence in the schedule_create rrule format. */
     rrule?: string;
-    /** Omit to retain the destination and its creation settings. Providing target replaces them; new_once reserves a different Session. New targets capture this Session's working directory and preset. Choices are the same as schedule_create. */
+    /** Omit to retain the destination and its creation settings. Providing target replaces them; new_once reserves a different Session. New targets capture this Session's working directory and preset, and any model selected by provider, model, and reasoning_effort. Choices are the same as schedule_create. */
     target?: "this_session" | "new_once" | "new";
+    /** Provider id of the model used for each session that a new_once or new target creates; requires model. Omit both to use the default model. An existing session target keeps its own model. */
+    provider?: string;
+    /** Model id within that provider; requires provider. */
+    model?: string;
+    /** Reasoning effort id for the selected model; requires provider and model. Omit to use the model's default. */
+    reasoning_effort?: string;
     /** false pauses the task; true resumes only if its timing has a future occurrence. Otherwise provide a new rrule. */
     active?: boolean;
     /** updatedAt from the latest result that returned this task; if the task changed after that result, the result is schedule_conflict and nothing changes. */
@@ -564,12 +576,22 @@ interface ToolOutputMap {
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     } | {
       kind: "new";
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     };
     status: "active" | "paused" | "ended";
@@ -596,12 +618,22 @@ interface ToolOutputMap {
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     } | {
       kind: "new";
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     };
     status: "active" | "paused" | "ended";
@@ -629,12 +661,22 @@ interface ToolOutputMap {
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     } | {
       kind: "new";
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     };
     status: "active" | "paused" | "ended";
@@ -661,12 +703,22 @@ interface ToolOutputMap {
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     } | {
       kind: "new";
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     };
     status: "active" | "paused" | "ended";
@@ -693,12 +745,22 @@ interface ToolOutputMap {
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     } | {
       kind: "new";
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     };
     status: "active" | "paused" | "ended";
@@ -724,12 +786,22 @@ interface ToolOutputMap {
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     } | {
       kind: "new";
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     };
     status: "active" | "paused" | "ended";
@@ -757,12 +829,22 @@ interface ToolOutputMap {
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     } | {
       kind: "new";
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     };
     status: "active" | "paused" | "ended";
@@ -777,7 +859,7 @@ interface ToolOutputMap {
     timeZone: string;
     weekdays: number[];
   } | {
-    code: "invalid_prompt" | "invalid_rule" | "invalid_time_zone" | "not_future" | "frequency_too_high" | "subagent_session" | "internal_error";
+    code: "invalid_selector" | "invalid_prompt" | "invalid_rule" | "invalid_time_zone" | "not_future" | "frequency_too_high" | "model_unavailable" | "subagent_session" | "internal_error";
     message: string;
   };
   schedule_edit: {
@@ -795,12 +877,22 @@ interface ToolOutputMap {
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     } | {
       kind: "new";
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     };
     status: "active" | "paused" | "ended";
@@ -827,12 +919,22 @@ interface ToolOutputMap {
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     } | {
       kind: "new";
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     };
     status: "active" | "paused" | "ended";
@@ -860,12 +962,22 @@ interface ToolOutputMap {
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     } | {
       kind: "new";
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     };
     status: "active" | "paused" | "ended";
@@ -892,12 +1004,22 @@ interface ToolOutputMap {
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     } | {
       kind: "new";
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     };
     status: "active" | "paused" | "ended";
@@ -924,12 +1046,22 @@ interface ToolOutputMap {
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     } | {
       kind: "new";
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     };
     status: "active" | "paused" | "ended";
@@ -955,12 +1087,22 @@ interface ToolOutputMap {
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     } | {
       kind: "new";
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     };
     status: "active" | "paused" | "ended";
@@ -988,12 +1130,22 @@ interface ToolOutputMap {
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     } | {
       kind: "new";
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     };
     status: "active" | "paused" | "ended";
@@ -1017,7 +1169,7 @@ interface ToolOutputMap {
     id: string;
     code: "schedule_conflict";
   } | {
-    code: "invalid_selector" | "invalid_prompt" | "invalid_rule" | "invalid_time_zone" | "not_future" | "frequency_too_high" | "subagent_session" | "internal_error";
+    code: "invalid_selector" | "invalid_prompt" | "invalid_rule" | "invalid_time_zone" | "not_future" | "frequency_too_high" | "model_unavailable" | "subagent_session" | "internal_error";
     message: string;
   };
   schedule_list: {
@@ -1036,12 +1188,22 @@ interface ToolOutputMap {
         create: {
           cwd?: string;
           agentPreset?: string;
+          model?: {
+            provider: string;
+            model: string;
+            reasoningEffort?: string;
+          };
         };
       } | {
         kind: "new";
         create: {
           cwd?: string;
           agentPreset?: string;
+          model?: {
+            provider: string;
+            model: string;
+            reasoningEffort?: string;
+          };
         };
       };
       status: "active" | "paused" | "ended";
@@ -1068,12 +1230,22 @@ interface ToolOutputMap {
         create: {
           cwd?: string;
           agentPreset?: string;
+          model?: {
+            provider: string;
+            model: string;
+            reasoningEffort?: string;
+          };
         };
       } | {
         kind: "new";
         create: {
           cwd?: string;
           agentPreset?: string;
+          model?: {
+            provider: string;
+            model: string;
+            reasoningEffort?: string;
+          };
         };
       };
       status: "active" | "paused" | "ended";
@@ -1101,12 +1273,22 @@ interface ToolOutputMap {
         create: {
           cwd?: string;
           agentPreset?: string;
+          model?: {
+            provider: string;
+            model: string;
+            reasoningEffort?: string;
+          };
         };
       } | {
         kind: "new";
         create: {
           cwd?: string;
           agentPreset?: string;
+          model?: {
+            provider: string;
+            model: string;
+            reasoningEffort?: string;
+          };
         };
       };
       status: "active" | "paused" | "ended";
@@ -1133,12 +1315,22 @@ interface ToolOutputMap {
         create: {
           cwd?: string;
           agentPreset?: string;
+          model?: {
+            provider: string;
+            model: string;
+            reasoningEffort?: string;
+          };
         };
       } | {
         kind: "new";
         create: {
           cwd?: string;
           agentPreset?: string;
+          model?: {
+            provider: string;
+            model: string;
+            reasoningEffort?: string;
+          };
         };
       };
       status: "active" | "paused" | "ended";
@@ -1165,12 +1357,22 @@ interface ToolOutputMap {
         create: {
           cwd?: string;
           agentPreset?: string;
+          model?: {
+            provider: string;
+            model: string;
+            reasoningEffort?: string;
+          };
         };
       } | {
         kind: "new";
         create: {
           cwd?: string;
           agentPreset?: string;
+          model?: {
+            provider: string;
+            model: string;
+            reasoningEffort?: string;
+          };
         };
       };
       status: "active" | "paused" | "ended";
@@ -1196,12 +1398,22 @@ interface ToolOutputMap {
         create: {
           cwd?: string;
           agentPreset?: string;
+          model?: {
+            provider: string;
+            model: string;
+            reasoningEffort?: string;
+          };
         };
       } | {
         kind: "new";
         create: {
           cwd?: string;
           agentPreset?: string;
+          model?: {
+            provider: string;
+            model: string;
+            reasoningEffort?: string;
+          };
         };
       };
       status: "active" | "paused" | "ended";
@@ -1229,12 +1441,22 @@ interface ToolOutputMap {
         create: {
           cwd?: string;
           agentPreset?: string;
+          model?: {
+            provider: string;
+            model: string;
+            reasoningEffort?: string;
+          };
         };
       } | {
         kind: "new";
         create: {
           cwd?: string;
           agentPreset?: string;
+          model?: {
+            provider: string;
+            model: string;
+            reasoningEffort?: string;
+          };
         };
       };
       status: "active" | "paused" | "ended";
@@ -1272,12 +1494,22 @@ interface ToolOutputMap {
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     } | {
       kind: "new";
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     };
     status: "active" | "paused" | "ended";
@@ -1304,12 +1536,22 @@ interface ToolOutputMap {
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     } | {
       kind: "new";
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     };
     status: "active" | "paused" | "ended";
@@ -1337,12 +1579,22 @@ interface ToolOutputMap {
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     } | {
       kind: "new";
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     };
     status: "active" | "paused" | "ended";
@@ -1369,12 +1621,22 @@ interface ToolOutputMap {
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     } | {
       kind: "new";
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     };
     status: "active" | "paused" | "ended";
@@ -1401,12 +1663,22 @@ interface ToolOutputMap {
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     } | {
       kind: "new";
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     };
     status: "active" | "paused" | "ended";
@@ -1432,12 +1704,22 @@ interface ToolOutputMap {
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     } | {
       kind: "new";
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     };
     status: "active" | "paused" | "ended";
@@ -1465,12 +1747,22 @@ interface ToolOutputMap {
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     } | {
       kind: "new";
       create: {
         cwd?: string;
         agentPreset?: string;
+        model?: {
+          provider: string;
+          model: string;
+          reasoningEffort?: string;
+        };
       };
     };
     status: "active" | "paused" | "ended";
